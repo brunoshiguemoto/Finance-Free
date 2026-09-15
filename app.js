@@ -54,6 +54,7 @@ function navegarParaView(viewId) {
   else if (viewId === "viewContas") carregarContasView();
   else if (viewId === "viewCartoes") carregarCartoesView();
   else if (viewId === "viewInvestimentos") carregarInvestimentosView();
+  else if (viewId === "viewSaudeFinanceira") carregarSaudeFinanceiraView();
 }
 
 function atualizarHeaderUsuario() {
@@ -658,4 +659,135 @@ async function registrarTempoUso() {
 
 function formatarMoeda(val) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+}
+
+async function carregarSaudeFinanceiraView() {
+  const mesAno = getMesAnoFormatado();
+  let totalReceita = 6360.72;
+  let essenciais = 3307.57; // ~52%
+  let investimentos = 1781.00; // ~28%
+  let educacao = 508.85; // ~8%
+  let estiloLivre = 763.28; // ~12%
+
+  try {
+    const res = await fetch(`${API_URL}?action=getDashboard&userId=${currentUser.ID_Usuario}&mesAno=${mesAno}`);
+    const data = await res.json();
+    if (data.status === "success" && data.totalReceitas > 0) {
+      totalReceita = data.totalReceitas;
+      if (data.educacaoFinanceira) {
+        essenciais = data.educacaoFinanceira.essenciais || (totalReceita * 0.52);
+        investimentos = data.educacaoFinanceira.investimentos || (totalReceita * 0.28);
+        educacao = data.educacaoFinanceira.educacao || (totalReceita * 0.08);
+        estiloLivre = data.educacaoFinanceira.livre || (totalReceita * 0.12);
+      }
+    }
+  } catch (err) {
+    console.log("Modo demonstração de Saúde Financeira ativo");
+  }
+
+  const pctEssenciais = Math.round((essenciais / totalReceita) * 100);
+  const pctInvest = Math.round((investimentos / totalReceita) * 100);
+  const pctEduc = Math.round((educacao / totalReceita) * 100);
+  const pctLivre = Math.round((estiloLivre / totalReceita) * 100);
+
+  // Renderizar Gráfico de Barras Comparativo
+  renderizarGraficoSaudeBarra([pctEssenciais, pctInvest, pctEduc, pctLivre]);
+
+  // Pontuação da Saúde Financeira (0 a 100)
+  const diffEssenciais = Math.abs(pctEssenciais - 50);
+  const diffInvest = Math.abs(pctInvest - 30);
+  const diffEduc = Math.abs(pctEduc - 10);
+  const diffLivre = Math.abs(pctLivre - 10);
+  const totalDiff = diffEssenciais + diffInvest + diffEduc + diffLivre;
+  const score = Math.max(0, Math.min(100, Math.round(100 - (totalDiff * 1.2))));
+
+  const scoreElem = document.getElementById("scoreSaudeNum");
+  if (scoreElem) scoreElem.textContent = score;
+
+  // Atualizar textos e barras
+  const txtEss = document.getElementById("txtEssenciais");
+  if (txtEss) txtEss.textContent = `${pctEssenciais}% (Ideal: 50%)`;
+  const barEss = document.getElementById("barEssenciais");
+  if (barEss) barEss.style.width = `${Math.min(100, pctEssenciais)}%`;
+
+  const txtInv = document.getElementById("txtInvest");
+  if (txtInv) txtInv.textContent = `${pctInvest}% (Ideal: 30%)`;
+  const barInv = document.getElementById("barInvest");
+  if (barInv) barInv.style.width = `${Math.min(100, pctInvest)}%`;
+
+  const txtEdu = document.getElementById("txtEduc");
+  if (txtEdu) txtEdu.textContent = `${pctEduc}% (Ideal: 10%)`;
+  const barEdu = document.getElementById("barEduc");
+  if (barEdu) barEdu.style.width = `${Math.min(100, pctEduc)}%`;
+
+  const txtLiv = document.getElementById("txtLivre");
+  if (txtLiv) txtLiv.textContent = `${pctLivre}% (Ideal: 10%)`;
+  const barLiv = document.getElementById("barLivre");
+  if (barLiv) barLiv.style.width = `${Math.min(100, pctLivre)}%`;
+}
+
+function renderizarGraficoSaudeBarra(realValues) {
+  const ctx = document.getElementById('saudeBarChart');
+  if (!ctx) return;
+
+  if (window.mySaudeBarChart) {
+    window.mySaudeBarChart.destroy();
+  }
+
+  window.mySaudeBarChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Despesas Essenciais', 'Investimentos', 'Educação', 'Estilo de Vida'],
+      datasets: [
+        {
+          label: 'Real do Usuário (%)',
+          data: realValues,
+          backgroundColor: '#06b6d4',
+          borderColor: '#0284c7',
+          borderWidth: 1,
+          borderRadius: 6
+        },
+        {
+          label: 'Alvo Parametrizado (%)',
+          data: [50, 30, 10, 10],
+          backgroundColor: '#10b981',
+          borderColor: '#059669',
+          borderWidth: 1,
+          borderRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: '#f8fafc', font: { size: 12, weight: 'bold' } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.raw}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: {
+            color: '#94a3b8',
+            callback: function(val) { return val + '%'; }
+          },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' }
+        },
+        x: {
+          ticks: { color: '#f8fafc', font: { size: 11 } },
+          grid: { display: false }
+        }
+      }
+    }
+  });
 }
