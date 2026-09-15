@@ -1,19 +1,14 @@
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 9.0
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 13.0 (ESPECIALISTA)
 // Arquivo: app.js
-// Descrição: Navegação por Views, Modal (+), Receitas, Despesas, Contas,
-//            Cartões, Investimentos (com Gráfico de Pizza, Categorias e Cotas).
+// Descrição: Bloqueio Total de Acesso sem Login, Zero Dados Mockados/Default,
+//            Autenticação Rígida por ID_Usuario e Suporte a Convidados com ID_Titular.
 // ============================================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbzmHwl89lV7YvXkbGGEeknW1KX9dv_bWf4T0r9fVIwgFSPzNxCdJipYfuQUaK32rYp79Q/exec";
 
-let currentUser = JSON.parse(localStorage.getItem("finance_free_user")) || {
-  ID_Usuario: "fd45d63a",
-  Nome_Completo: "Bruno Shiguemoto",
-  Email: "shiguemoto.bruno@gmail.com",
-  TipoPerfil: "Titular"
-};
-
+// SEM USUÁRIO DEFAULT! Exige login explícito.
+let currentUser = JSON.parse(localStorage.getItem("finance_free_user")) || null;
 let currentMonthDate = new Date();
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -21,13 +16,181 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function inicializarApp() {
-  atualizarHeaderUsuario();
-  atualizarDisplayMes();
-  if (typeof carregarSelectBancos === "function") {
-    carregarSelectBancos("selectBancoConta");
+  verificarSessao();
+}
+
+function verificarSessao() {
+  const authOverlay = document.getElementById("authScreen");
+  const mainContent = document.getElementById("mainContent");
+  const sidebar = document.getElementById("sidebarRight");
+  const btnFloating = document.getElementById("btnFloatingAdd");
+
+  if (!currentUser || !currentUser.ID_Usuario) {
+    // BLOQUEIO TOTAL: Exibe somente a tela de login
+    if (authOverlay) authOverlay.style.display = "flex";
+    if (mainContent) mainContent.style.display = "none";
+    if (sidebar) sidebar.style.display = "none";
+    if (btnFloating) btnFloating.style.display = "none";
+  } else {
+    // USUÁRIO AUTENTICADO: Libera interface do usuário
+    if (authOverlay) authOverlay.style.display = "none";
+    if (mainContent) mainContent.style.display = "block";
+    if (sidebar) sidebar.style.display = "flex";
+    if (btnFloating) btnFloating.style.display = "flex";
+
+    atualizarHeaderUsuario();
+    atualizarDisplayMes();
+    carregarDashboard();
   }
-  await carregarDashboard();
-  registrarTempoUso();
+}
+
+function alternarAbaAuth(tab) {
+  document.getElementById("formLoginTab").style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById("formCadastTab").style.display = tab === 'cadast' ? 'block' : 'none';
+  document.getElementById("formConvidTab").style.display = tab === 'convid' ? 'block' : 'none';
+
+  document.getElementById("tabBtnLogin").classList.toggle("active", tab === 'login');
+  document.getElementById("tabBtnCadast").classList.toggle("active", tab === 'cadast');
+  document.getElementById("tabBtnConvid").classList.toggle("active", tab === 'convid');
+}
+
+function validarSenhaForte(senha) {
+  const reqMin = senha.length >= 8;
+  const reqMai = /[A-Z]/.test(senha);
+  const reqMinu = /[a-z]/.test(senha);
+  const reqNum = /[0-9]/.test(senha);
+  const reqSim = /[@$!%*?&]/.test(senha);
+
+  document.getElementById("pwdMin").classList.toggle("valid", reqMin);
+  document.getElementById("pwdMai").classList.toggle("valid", reqMai);
+  document.getElementById("pwdMinu").classList.toggle("valid", reqMinu);
+  document.getElementById("pwdNum").classList.toggle("valid", reqNum);
+  document.getElementById("pwdSim").classList.toggle("valid", reqSim);
+
+  return reqMin && reqMai && reqMinu && reqNum && reqSim;
+}
+
+async function realizarLoginSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById("loginEmailInput").value.trim();
+  const senha = document.getElementById("loginSenhaInput").value.trim();
+
+  if (!email || !senha) {
+    alert("Por favor, preencha o e-mail e a senha.");
+    return;
+  }
+
+  const btn = document.getElementById("btnLoginSubmit");
+  if (btn) btn.textContent = "Verificando...";
+
+  try {
+    const res = await fetch(`${API_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(senha)}`);
+    const data = await res.json();
+
+    if (data.status === "success" && data.user) {
+      currentUser = data.user;
+      localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+      alert(`✅ Login realizado com sucesso! Bem-vindo(a), ${currentUser.Nome_Completo}`);
+      verificarSessao();
+    } else {
+      alert("❌ " + (data.message || "Erro ao efetuar login. Verifique seu e-mail e senha."));
+    }
+  } catch (err) {
+    alert("❌ Erro de conexão com a API. Tente novamente.");
+  } finally {
+    if (btn) btn.textContent = "Entrar na Conta";
+  }
+}
+
+async function realizarCadastroSubmit(e) {
+  e.preventDefault();
+  const nome = document.getElementById("cadNomeInput").value.trim();
+  const email = document.getElementById("cadEmailInput").value.trim();
+  const tel = document.getElementById("cadTelInput").value.trim();
+  const senha = document.getElementById("cadSenhaInput").value.trim();
+
+  if (!validarSenhaForte(senha)) {
+    alert("A senha não atende aos requisitos mínimos de segurança!");
+    return;
+  }
+
+  const payload = {
+    Nome_Completo: nome,
+    Email: email,
+    Telefone: tel,
+    Senha: senha,
+    TipoPerfil: "Titular",
+    ID_Titular: ""
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "cadastrarUsuario", payload: payload })
+    });
+    const data = await res.json();
+
+    if (data.status === "success" && data.user) {
+      currentUser = data.user;
+      localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+      alert(`🎉 Conta criada com sucesso! Seu código de ID é: ${currentUser.ID_Usuario}`);
+      verificarSessao();
+    } else {
+      alert("❌ " + (data.message || "Erro ao realizar cadastro."));
+    }
+  } catch (err) {
+    alert("❌ Erro ao enviar solicitação de cadastro.");
+  }
+}
+
+async function realizarCadastroConvidadoSubmit(e) {
+  e.preventDefault();
+  const idTitular = document.getElementById("convidIdTitularInput").value.trim();
+  const nome = document.getElementById("convidNomeInput").value.trim();
+  const email = document.getElementById("convidEmailInput").value.trim();
+  const senha = document.getElementById("convidSenhaInput").value.trim();
+
+  if (!idTitular) {
+    alert("Por favor, informe o Código do Convite (ID do Titular).");
+    return;
+  }
+
+  const payload = {
+    Nome_Completo: nome,
+    Email: email,
+    Senha: senha,
+    TipoPerfil: "Convidado",
+    ID_Titular: idTitular
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "cadastrarUsuario", payload: payload })
+    });
+    const data = await res.json();
+
+    if (data.status === "success" && data.user) {
+      currentUser = data.user;
+      localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+      alert(`🎉 Acesso de convidado ativado com sucesso! Vinculado ao plano familiar.`);
+      verificarSessao();
+    } else {
+      alert("❌ " + (data.message || "Erro ao cadastrar convidado."));
+    }
+  } catch (err) {
+    alert("❌ Erro ao enviar solicitação.");
+  }
+}
+
+function encerrarSessao() {
+  if (confirm("Deseja realmente sair da sua conta no Finance Free?")) {
+    localStorage.removeItem("finance_free_user");
+    currentUser = null;
+    verificarSessao();
+  }
 }
 
 function toggleSidebar() {
@@ -45,7 +208,6 @@ function navegarParaView(viewId) {
   const sidebarItems = document.querySelectorAll(".sidebar-item");
   sidebarItems.forEach(item => item.classList.remove("active"));
 
-  // Recolher sidebar
   const sb = document.getElementById("sidebarRight");
   if (sb) sb.classList.remove("expanded");
 
@@ -59,8 +221,14 @@ function navegarParaView(viewId) {
 
 function atualizarHeaderUsuario() {
   const nameElem = document.getElementById("userNameDisplay");
+  const avatarElem = document.getElementById("userAvatar");
+  
   if (nameElem && currentUser) {
     nameElem.textContent = currentUser.Nome_Completo;
+    if (avatarElem) {
+      const initials = currentUser.Nome_Completo.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+      avatarElem.textContent = initials || "FF";
+    }
   }
 }
 
@@ -84,6 +252,7 @@ function getMesAnoFormatado() {
 }
 
 async function carregarDashboard() {
+  if (!currentUser || !currentUser.ID_Usuario) return;
   const mesAno = getMesAnoFormatado();
   
   try {
@@ -94,15 +263,14 @@ async function carregarDashboard() {
       document.getElementById("totalReceitas").textContent = formatarMoeda(data.totalReceitas);
       document.getElementById("totalDespesas").textContent = formatarMoeda(data.totalDespesas);
       document.getElementById("pontosTotal").textContent = `${data.gamificacao.Pontos_Total || 100} pts`;
-      
       renderizarGraficoPizza(data.graficoPizza || {});
     }
   } catch (error) {
-    console.log("Fallback / Modo demonstração ativo:", error);
-    document.getElementById("totalReceitas").textContent = "R$ 6.360,72";
-    document.getElementById("totalDespesas").textContent = "R$ 3.840,00";
-    document.getElementById("pontosTotal").textContent = "120 pts";
-    renderizarGraficoPizza({ "Moradia": 1800, "Alimentação": 940, "Transporte": 600, "Lazer": 500 });
+    // SEM DADOS MOCKADOS! Estado zerado limpo para novo usuário
+    document.getElementById("totalReceitas").textContent = "R$ 0,00";
+    document.getElementById("totalDespesas").textContent = "R$ 0,00";
+    document.getElementById("pontosTotal").textContent = "100 pts";
+    renderizarGraficoPizza({});
   }
 }
 
@@ -118,9 +286,7 @@ function renderizarGraficoPizza(categoriasMap) {
     values.push(1);
   }
 
-  if (window.myPieChart) {
-    window.myPieChart.destroy();
-  }
+  if (window.myPieChart) window.myPieChart.destroy();
 
   window.myPieChart = new Chart(ctx, {
     type: 'doughnut',
@@ -136,17 +302,10 @@ function renderizarGraficoPizza(categoriasMap) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: '#f8fafc', font: { size: 11 } }
-        }
-      }
+      plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', font: { size: 11 } } } }
     }
   });
 }
-
-/* CARREGAR VIEWS ESPECÍFICAS */
 
 async function carregarReceitasView() {
   const container = document.getElementById("listaReceitasView");
@@ -158,28 +317,27 @@ async function carregarReceitasView() {
     const data = await res.json();
     
     if (Array.isArray(data) && data.length > 0) {
-      data.sort((a, b) => new Date(b.Data_Fato) - new Date(a.Data_Fato));
+      data.sort((a, b) => String(b.Data_Fato || '').localeCompare(String(a.Data_Fato || '')));
       let html = "";
       data.forEach(item => {
         html += `
           <div class="data-item">
             <div class="data-item-info">
-              <h5>${item.Descricao || 'Receita'}</h5>
-              <span>${item.Data_Fato || ''} • ${item["Origem da Receita"] || 'Geral'}</span>
-              ${item.Observacoes ? `<br><small style="color:#94a3b8;">📝 ${item.Observacoes}</small>` : ''}
+              <h5>💰 ${item.Descricao || 'Receita'}</h5>
+              <span>Data: ${item.Data_Fato || '-'} | Categoria: ${item.Origem_Receita || item["Origem da Receita"] || 'Geral'}</span>
+              ${item.Observacoes ? `<br><small style="color:#64748b;">Obs: ${item.Observacoes}</small>` : ''}
             </div>
-            <div class="data-item-value value-receita">
-              + ${formatarMoeda(item.Valor)}
+            <div class="data-item-value">
+              <span class="value-receita" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
             </div>
-          </div>
-        `;
+          </div>`;
       });
       container.innerHTML = html;
     } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita registrada até o momento.</p>";
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita cadastrada para este usuário.</p>";
     }
-  } catch (err) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Exibindo modo demonstração de receitas.</p>";
+  } catch (e) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita encontrada.</p>";
   }
 }
 
@@ -193,28 +351,27 @@ async function carregarDespesasView() {
     const data = await res.json();
     
     if (Array.isArray(data) && data.length > 0) {
-      data.sort((a, b) => new Date(b.Data_Fato) - new Date(a.Data_Fato));
+      data.sort((a, b) => String(b.Data_Fato || '').localeCompare(String(a.Data_Fato || '')));
       let html = "";
       data.forEach(item => {
         html += `
           <div class="data-item">
             <div class="data-item-info">
-              <h5>${item.Descricao || 'Despesa'}</h5>
-              <span>${item.Data_Fato || ''} • ${item.Destino_Despesa || 'Geral'}</span>
-              ${item.Observacoes ? `<br><small style="color:#94a3b8;">📝 ${item.Observacoes}</small>` : ''}
+              <h5>💸 ${item.Descricao || 'Despesa'}</h5>
+              <span>Data: ${item.Data_Fato || '-'} | Pagamento: ${item.Forma_Pagamento || 'Débito'}</span>
+              ${item.Observacoes ? `<br><small style="color:#64748b;">Obs: ${item.Observacoes}</small>` : ''}
             </div>
-            <div class="data-item-value value-despesa">
-              - ${formatarMoeda(item.Valor)}
+            <div class="data-item-value">
+              <span class="value-despesa" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
             </div>
-          </div>
-        `;
+          </div>`;
       });
       container.innerHTML = html;
     } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma despesa registrada até o momento.</p>";
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma despesa registrada.</p>";
     }
-  } catch (err) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Exibindo modo demonstração de despesas.</p>";
+  } catch (e) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma despesa registrada.</p>";
   }
 }
 
@@ -240,16 +397,15 @@ async function carregarContasView() {
             </div>
             <div class="data-item-value">
               <span class="value-receita" style="font-weight:bold;">${formatarMoeda(item.Saldo_Atual || item["Saldo Inicial"] || 0)}</span>
-              <button class="btn-delete-icon" onclick="deletarConta('${idTrans}')" title="Excluir Conta">✕</button>
+              <button class="btn-delete-icon" onclick="deletarConta('${idTrans}')">✕</button>
             </div>
-          </div>
-        `;
+          </div>`;
       });
       container.innerHTML = html;
     } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta cadastrada. Clique em + Nova Conta.</p>";
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta bancária ou Wallet cadastrada.</p>";
     }
-  } catch (err) {
+  } catch (e) {
     container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta cadastrada.</p>";
   }
 }
@@ -275,108 +431,78 @@ async function carregarCartoesView() {
             </div>
             <div class="data-item-value">
               <span style="font-weight:bold; color:#8b5cf6;">${formatarMoeda(item.Limite_Total || 0)}</span>
-              <button class="btn-delete-icon" onclick="deletarCartao('${idCartao}')" title="Excluir Cartão">✕</button>
+              <button class="btn-delete-icon" onclick="deletarCartao('${idCartao}')">✕</button>
             </div>
-          </div>
-        `;
+          </div>`;
       });
       container.innerHTML = html;
     } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão cadastrado. Clique em + Novo Cartão.</p>";
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão de crédito cadastrado.</p>";
     }
-  } catch (err) {
+  } catch (e) {
     container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão cadastrado.</p>";
   }
 }
 
-/* VIEW INVESTIMENTOS & PATRIMÔNIO */
-
 async function carregarInvestimentosView() {
   const container = document.getElementById("listaInvestimentosView");
   if (!container) return;
-  container.innerHTML = "<p style='color:#94a3b8;'>Carregando carteira de investimentos...</p>";
 
   try {
     const res = await fetch(`${API_URL}?action=getInvestimentos&userId=${currentUser.ID_Usuario}`);
     const data = await res.json();
     
-    let list = Array.isArray(data) ? data : [];
-    
-    // Se sem investimentos remotos, carregar dados de demonstração
-    if (list.length === 0) {
-      list = [
-        { ID_Investimento: "INV_1", Categoria: "Ações", Nome_Ativo: "PETR4 - Petrobras", Valor_Total: 12500, Quantidade_Cotas: 350, Tipo_Operacao: "Aquisição de Cotas", Data_Operacao: "2026-09-01" },
-        { ID_Investimento: "INV_2", Categoria: "FIIs", Nome_Ativo: "HGLG11 - Pátria Logística", Valor_Total: 10800, Quantidade_Cotas: 65, Tipo_Operacao: "Aquisição de Cotas", Data_Operacao: "2026-09-05" },
-        { ID_Investimento: "INV_3", Categoria: "Tesouro Direto", Nome_Ativo: "Tesouro Selic 2029", Valor_Total: 15000, Tipo_Operacao: "Saldo Inicial", Data_Operacao: "2026-08-15" },
-        { ID_Investimento: "INV_4", Categoria: "Crypto", Nome_Ativo: "Bitcoin (BTC)", Valor_Total: 4500, Quantidade_Cotas: 0.008, Tipo_Operacao: "Aquisição de Cotas", Data_Operacao: "2026-09-10" }
-      ];
+    let totalPatrimonio = 0;
+    const catMap = {};
+
+    if (Array.isArray(data) && data.length > 0) {
+      let html = "";
+      data.forEach(item => {
+        const idInv = item.ID_Investimento || item.Nome_Ativo;
+        const val = parseFloat(item.Valor_Total) || parseFloat(item.Valor) || 0;
+        totalPatrimonio += val;
+        const cat = item.Categoria || "Outros";
+        catMap[cat] = (catMap[cat] || 0) + val;
+
+        html += `
+          <div class="data-item">
+            <div class="data-item-info">
+              <h5>📈 ${item.Nome_Ativo || 'Investimento'}</h5>
+              <span>Categoria: ${cat} | Cotas: ${item.Quantidade || 1}</span>
+            </div>
+            <div class="data-item-value">
+              <span style="font-weight:bold; color:#10b981;">${formatarMoeda(val)}</span>
+              <button class="btn-delete-icon" onclick="deletarInvestimento('${idInv}')">✕</button>
+            </div>
+          </div>`;
+      });
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum ativo de investimento cadastrado.</p>";
     }
 
-    let patrimonioTotal = 0;
-    const catMap = {
-      "Ações": 0,
-      "FIIs": 0,
-      "Previdência Privada": 0,
-      "Crypto": 0,
-      "Ativos Internacionais": 0,
-      "Tesouro Direto": 0
-    };
-
-    let html = "";
-    list.forEach(item => {
-      const val = parseFloat(item.Valor_Total || item.Valor) || 0;
-      patrimonioTotal += val;
-      const cat = item.Categoria || "Ações";
-      catMap[cat] = (catMap[cat] || 0) + val;
-
-      let badgeClass = "badge-acoes";
-      if (cat === "FIIs") badgeClass = "badge-fiis";
-      else if (cat === "Previdência Privada") badgeClass = "badge-prev";
-      else if (cat === "Crypto") badgeClass = "badge-crypto";
-      else if (cat === "Ativos Internacionais") badgeClass = "badge-internacional";
-      else if (cat === "Tesouro Direto") badgeClass = "badge-tesouro";
-
-      const idInv = item.ID_Investimento || item._rowId;
-
-      html += `
-        <div class="data-item">
-          <div class="data-item-info">
-            <h5>${item.Nome_Ativo || 'Ativo'}</h5>
-            <span>${item.Tipo_Operacao || 'Saldo Inicial'} ${item.Quantidade_Cotas ? '• ' + item.Quantidade_Cotas + ' cota(s)' : ''}</span>
-            <br><span class="badge-cat ${badgeClass}">${cat}</span>
-            ${item.Observacoes ? `<br><small style="color:#94a3b8;">📝 ${item.Observacoes}</small>` : ''}
-          </div>
-          <div class="data-item-value">
-            <span class="value-receita" style="font-weight:bold;">${formatarMoeda(val)}</span>
-            <button class="btn-delete-icon" onclick="deletarInvestimento('${idInv}')" title="Excluir Investimento">✕</button>
-          </div>
-        </div>
-      `;
-    });
-
-    document.getElementById("patrimonioTotalInvest").textContent = formatarMoeda(patrimonioTotal);
-    container.innerHTML = html;
-
+    document.getElementById("totalPatrimonioInvest").textContent = formatarMoeda(totalPatrimonio);
     renderizarGraficoInvestimentos(catMap);
-
-  } catch (err) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Erro ao carregar carteira de investimentos.</p>";
+  } catch (e) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Sem dados de investimento.</p>";
   }
 }
 
 function renderizarGraficoInvestimentos(catMap) {
   const ctx = document.getElementById('investimentosChart');
   if (!ctx) return;
-
   const labels = Object.keys(catMap);
   const values = Object.values(catMap);
 
-  if (window.myInvestPieChart) {
-    window.myInvestPieChart.destroy();
+  if (labels.length === 0) {
+    labels.push("Sem Ativos");
+    values.push(1);
   }
 
-  window.myInvestPieChart = new Chart(ctx, {
-    type: 'doughnut',
+  if (window.myInvestChart) window.myInvestChart.destroy();
+
+  window.myInvestChart = new Chart(ctx, {
+    type: 'pie',
     data: {
       labels: labels,
       datasets: [{
@@ -389,67 +515,55 @@ function renderizarGraficoInvestimentos(catMap) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: '#f8fafc', font: { size: 11 } }
-        }
-      }
+      plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', font: { size: 11 } } } }
     }
   });
 }
 
-/* EXCLUSÕES */
-
-async function deletarConta(id) {
-  if (!confirm("Tem certeza que deseja excluir esta conta bancária?")) return;
+async function carregarSaudeFinanceiraView() {
   try {
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'deleteConta', payload: { id: id }, userId: currentUser.ID_Usuario })
-    });
-    alert("Conta excluída com sucesso!");
+    const mesAno = getMesAnoFormatado();
+    const res = await fetch(`${API_URL}?action=getDashboard&userId=${currentUser.ID_Usuario}&mesAno=${mesAno}`);
+    const data = await res.json();
+    
+    if (data.status === "success") {
+      const ef = data.educacaoFinanceira || { essenciais: 0, investimentos: 0, educacao: 0, livre: 0 };
+      const tot = data.totalReceitas > 0 ? data.totalReceitas : 1;
+      
+      const pctEss = Math.round((ef.essenciais / tot) * 100);
+      const pctInv = Math.round((ef.investimentos / tot) * 100);
+      const pctEdu = Math.round((ef.educacao / tot) * 100);
+      const pctLiv = Math.round((ef.livre / tot) * 100);
+
+      renderizarGraficoSaudeBarra([pctEss, pctInv, pctEdu, pctLiv]);
+    }
   } catch (e) {
-    alert("Solicitação de exclusão enviada.");
+    renderizarGraficoSaudeBarra([0, 0, 0, 0]);
   }
-  carregarContasView();
 }
 
-async function deletarCartao(id) {
-  if (!confirm("Tem certeza que deseja excluir este cartão de crédito?")) return;
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'deleteCartao', payload: { id: id }, userId: currentUser.ID_Usuario })
-    });
-    alert("Cartão excluído com sucesso!");
-  } catch (e) {
-    alert("Solicitação de exclusão enviada.");
-  }
-  carregarCartoesView();
-}
+function renderizarGraficoSaudeBarra(realValues) {
+  const ctx = document.getElementById('saudeFinanceiraChart');
+  if (!ctx) return;
 
-async function deletarInvestimento(id) {
-  if (!confirm("Tem certeza que deseja excluir este investimento da sua carteira?")) return;
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'deleteInvestimento', payload: { id: id }, userId: currentUser.ID_Usuario })
-    });
-    alert("Investimento excluído com sucesso!");
-  } catch (e) {
-    alert("Solicitação de exclusão enviada.");
-  }
-  carregarInvestimentosView();
-}
+  if (window.mySaudeChart) window.mySaudeChart.destroy();
 
-/* SALVAMENTO DE FORMULÁRIOS */
+  window.mySaudeChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Despesas Essenciais', 'Investimentos', 'Educação', 'Estilo de Vida'],
+      datasets: [
+        { label: 'Real (%)', data: realValues, backgroundColor: '#3b82f6' },
+        { label: 'Meta Parametrizada (%)', data: [50, 30, 10, 10], backgroundColor: '#10b981' }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, max: 100, ticks: { color: '#94a3b8' } }, x: { ticks: { color: '#94a3b8' } } }
+    }
+  });
+}
 
 function abrirModal(modalId) {
   const modal = document.getElementById(modalId);
@@ -471,11 +585,10 @@ function toggleFormaPagamento() {
   const tipo = document.getElementById("tipoLancamento").value;
   const formaSelect = document.getElementById("selectFormaPagamento");
   const forma = formaSelect ? formaSelect.value : "Débito";
-  
+
   const groupForma = document.getElementById("groupFormaPagamento");
   const groupCartao = document.getElementById("groupCartaoCredito");
   const groupConta = document.getElementById("groupContaBancaria");
-  const labelConta = document.getElementById("labelContaBancaria");
 
   if (tipo === "Despesa") {
     if (groupForma) groupForma.style.display = "block";
@@ -485,18 +598,11 @@ function toggleFormaPagamento() {
     } else {
       if (groupCartao) groupCartao.style.display = "none";
       if (groupConta) groupConta.style.display = "block";
-      if (labelConta) {
-        labelConta.textContent = (forma === "Dinheiro") 
-          ? "Selecione a Wallet / Carteira (Dinheiro Físico)" 
-          : "Selecione a Conta Bancária / Wallet";
-      }
     }
   } else {
-    // Receita
     if (groupForma) groupForma.style.display = "none";
     if (groupCartao) groupCartao.style.display = "none";
     if (groupConta) groupConta.style.display = "block";
-    if (labelConta) labelConta.textContent = "Conta Bancária de Destino / Wallet";
   }
 }
 
@@ -516,92 +622,66 @@ function toggleTipoLancamento() {
 }
 
 async function carregarOpcoesContasECartoes() {
-  const selectConta = document.getElementById("selectContaDespesa");
-  const selectCartao = document.getElementById("selectCartaoDespesa");
-
-  // Carregar Contas
-  if (selectConta) {
-    selectConta.innerHTML = '<option value="">-- Carregando contas... --</option>';
-    try {
-      const res = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
-      const data = await res.json();
-      selectConta.innerHTML = '';
-      
-      let walletFound = false;
-      if (Array.isArray(data) && data.length > 0) {
-        data.forEach(acc => {
+  if (!currentUser || !currentUser.ID_Usuario) return;
+  try {
+    const resContas = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
+    const contas = await resContas.json();
+    const selectConta = document.getElementById("selectContaOrigem");
+    if (selectConta) {
+      selectConta.innerHTML = '<option value="">-- Selecione a Conta ou Wallet --</option>';
+      if (Array.isArray(contas)) {
+        contas.forEach(c => {
           const opt = document.createElement("option");
-          const valKey = acc.ID_Banco || acc.Conta || acc.Intituicao;
-          opt.value = valKey;
-          opt.textContent = `🏦 ${acc.Intituicao || 'Conta'} (Saldo: ${formatarMoeda(acc.Saldo_Atual || acc['Saldo Inicial'] || 0)})`;
+          opt.value = c.ID_Banco || c.Conta;
+          opt.textContent = `${c.Intituicao || 'Conta'} (${formatarMoeda(c.Saldo_Atual || c["Saldo Inicial"] || 0)})`;
           selectConta.appendChild(opt);
-          if (String(acc.Intituicao || '').includes("Wallet") || String(acc.ID_Banco) === "000") {
-            walletFound = true;
-          }
         });
       }
-      
-      if (!walletFound) {
-        const optW = document.createElement("option");
-        optW.value = "000 - Wallet (Dinheiro Físico / Carteira)";
-        optW.textContent = "💵 Wallet (Dinheiro Físico / Carteira)";
-        selectConta.prepend(optW);
-      }
-    } catch (e) {
-      selectConta.innerHTML = '<option value="000 - Wallet (Dinheiro Físico / Carteira)">💵 Wallet (Dinheiro Físico / Carteira)</option>';
     }
-  }
 
-  // Carregar Cartões
-  if (selectCartao) {
-    selectCartao.innerHTML = '<option value="">-- Carregando cartões... --</option>';
-    try {
-      const res = await fetch(`${API_URL}?action=getCartoes&userId=${currentUser.ID_Usuario}`);
-      const data = await res.json();
-      selectCartao.innerHTML = '';
-      if (Array.isArray(data) && data.length > 0) {
-        data.forEach(card => {
+    const resCartoes = await fetch(`${API_URL}?action=getCartoes&userId=${currentUser.ID_Usuario}`);
+    const cartoes = await resCartoes.json();
+    const selectCartao = document.getElementById("selectCartaoOrigem");
+    if (selectCartao) {
+      selectCartao.innerHTML = '<option value="">-- Selecione o Cartão --</option>';
+      if (Array.isArray(cartoes)) {
+        cartoes.forEach(c => {
           const opt = document.createElement("option");
-          opt.value = card.ID_Cartao || card.Nome_Cartao;
-          opt.textContent = `💳 ${card.Nome_Cartao || 'Cartão'} (Limite: ${formatarMoeda(card.Limite_Total || 0)})`;
+          opt.value = c.ID_Cartao || c.Nome_Cartao;
+          opt.textContent = `${c.Nome_Cartao} (Lim. ${formatarMoeda(c.Limite_Total || 0)})`;
           selectCartao.appendChild(opt);
         });
-      } else {
-        selectCartao.innerHTML = '<option value="">-- Nenhum cartão de crédito cadastrado --</option>';
       }
-    } catch (e) {
-      selectCartao.innerHTML = '<option value="">-- Nenhum cartão de crédito cadastrado --</option>';
     }
-  }
+  } catch (e) {}
 }
 
 async function salvarLancamento(e) {
   e.preventDefault();
+  if (!currentUser || !currentUser.ID_Usuario) return;
   
   const tipo = document.getElementById("tipoLancamento").value;
   const descricao = document.getElementById("inputDescricao").value;
   const valor = parseFloat(document.getElementById("inputValor").value) || 0;
   const dataFato = document.getElementById("inputData").value || new Date().toISOString().substring(0, 10);
   const observacoes = document.getElementById("inputObservacoes").value;
-  const formaSelect = document.getElementById("selectFormaPagamento");
-  const formaPagamento = (tipo === "Despesa" && formaSelect) ? formaSelect.value : "Débito";
+  const formaPagamento = document.getElementById("selectFormaPagamento").value;
+  const idConta = document.getElementById("selectContaOrigem").value;
+  const idCartao = document.getElementById("selectCartaoOrigem").value;
   
   const classificacao = tipo === "Despesa" 
     ? document.getElementById("selectClassificacaoDespesa").value 
     : document.getElementById("selectClassificacaoReceita").value;
 
-  const idCartao = (tipo === "Despesa" && formaPagamento === "Crédito") ? document.getElementById("selectCartaoDespesa").value : "";
-  const idConta = (tipo === "Receita" || formaPagamento !== "Crédito") ? document.getElementById("selectContaDespesa").value : "";
-
   const payload = {
     Data_Fato: dataFato,
     Tipo: tipo,
     Descricao: descricao,
-    Forma_Pagamento: formaPagamento,
-    ID_Cartao: idCartao,
-    ID_Conta: idConta,
-    [tipo === "Despesa" ? "Destino_Despesa" : "Origem da Receita"]: classificacao,
+    [tipo === "Despesa" ? "Destino_Despesa" : "Origem_Receita"]: classificacao,
     Valor: valor,
+    Forma_Pagamento: formaPagamento,
+    ID_Conta: idConta,
+    ID_Cartao: idCartao,
     Observacoes: observacoes,
     ID_Transacao: "TX_" + Date.now(),
     ID_Usuario: currentUser.ID_Usuario,
@@ -613,22 +693,21 @@ async function salvarLancamento(e) {
   try {
     await fetch(API_URL, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: action, payload: payload })
     });
     alert("Lançamento salvo com sucesso!");
   } catch (err) {
-    alert("Salvo com sucesso!");
+    alert("Lançamento salvo!");
   }
 
   fecharModal("modalLancamento");
   carregarDashboard();
-  carregarContasView();
-  carregarCartoesView();
 }
+
 async function salvarNovaConta(e) {
   e.preventDefault();
+  if (!currentUser || !currentUser.ID_Usuario) return;
   const banco = document.getElementById("selectBancoConta").value;
   const agencia = document.getElementById("inputAgencia").value;
   const conta = document.getElementById("inputConta").value;
@@ -648,8 +727,7 @@ async function salvarNovaConta(e) {
   try {
     await fetch(API_URL, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: "addConta", payload: payload })
     });
     alert("Conta Bancária cadastrada com sucesso!");
@@ -662,6 +740,7 @@ async function salvarNovaConta(e) {
 
 async function salvarNovoCartao(e) {
   e.preventDefault();
+  if (!currentUser || !currentUser.ID_Usuario) return;
   const nomeCartao = document.getElementById("inputNomeCartao").value;
   const limite = parseFloat(document.getElementById("inputLimiteCartao").value) || 0;
   const diaFechamento = document.getElementById("inputDiaFechamento").value;
@@ -680,8 +759,7 @@ async function salvarNovoCartao(e) {
   try {
     await fetch(API_URL, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: "addCartao", payload: payload })
     });
     alert("Cartão de crédito cadastrado com sucesso!");
@@ -694,23 +772,20 @@ async function salvarNovoCartao(e) {
 
 async function salvarNovoInvestimento(e) {
   e.preventDefault();
-  const tipoOp = document.getElementById("selectTipoInvestOp").value;
-  const categoria = document.getElementById("selectCategoriaInvest").value;
-  const nomeAtivo = document.getElementById("inputNomeAtivoInvest").value;
-  const valor = parseFloat(document.getElementById("inputValorInvest").value) || 0;
-  const cotas = parseFloat(document.getElementById("inputCotasInvest").value) || 0;
-  const dataOp = document.getElementById("inputDataInvest").value || new Date().toISOString().substring(0, 10);
-  const obs = document.getElementById("inputObsInvest").value;
+  if (!currentUser || !currentUser.ID_Usuario) return;
+  const nomeAtivo = document.getElementById("inputNomeAtivo").value;
+  const categoria = document.getElementById("selectCategoriaInvestimento").value;
+  const tipoOperacao = document.getElementById("selectTipoOperacaoInvest").value;
+  const valorTotal = parseFloat(document.getElementById("inputValorTotalInvest").value) || 0;
+  const qtdCotas = parseFloat(document.getElementById("inputQtdCotasInvest").value) || 1;
 
   const payload = {
     ID_Investimento: "INV_" + Date.now(),
-    Tipo_Operacao: tipoOp,
-    Categoria: categoria,
     Nome_Ativo: nomeAtivo,
-    Valor_Total: valor,
-    Quantidade_Cotas: cotas,
-    Data_Operacao: dataOp,
-    Observacoes: obs,
+    Categoria: categoria,
+    Tipo_Operacao: tipoOperacao,
+    Valor_Total: valorTotal,
+    Quantidade: qtdCotas,
     ID_Usuario: currentUser.ID_Usuario,
     ID_Criador: currentUser.Nome_Completo
   };
@@ -718,182 +793,58 @@ async function salvarNovoInvestimento(e) {
   try {
     await fetch(API_URL, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: "addInvestimento", payload: payload })
     });
     alert("Investimento registrado com sucesso!");
   } catch (err) {
     alert("Investimento cadastrado!");
   }
-
   fecharModal("modalNovoInvestimento");
   carregarInvestimentosView();
 }
 
-function realizarLogin(e) {
-  e.preventDefault();
-  const emailInput = document.getElementById("loginEmail").value;
-  if (!emailInput) return;
-
-  currentUser = {
-    ID_Usuario: "fd45d63a",
-    Nome_Completo: emailInput.split("@")[0].toUpperCase(),
-    Email: emailInput,
-    TipoPerfil: "Titular"
-  };
-
-  localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-  atualizarHeaderUsuario();
-  fecharModal("modalLogin");
-  alert("✅ Login realizado com sucesso! Bem-vindo(a), " + currentUser.Nome_Completo);
-  carregarDashboard();
+async function deletarConta(id) {
+  if (!confirm("Deseja excluir esta conta bancária?")) return;
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'deleteConta', payload: { id: id }, userId: currentUser.ID_Usuario })
+    });
+    alert("Conta excluída com sucesso!");
+  } catch (e) {}
+  carregarContasView();
 }
 
-async function registrarTempoUso() {
-  setInterval(async () => {
-    try {
-      await fetch(API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'registrarAcesso', userId: currentUser.ID_Usuario })
-      });
-    } catch (e) {}
-  }, 60000);
+async function deletarCartao(id) {
+  if (!confirm("Deseja excluir este cartão de crédito?")) return;
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'deleteCartao', payload: { id: id }, userId: currentUser.ID_Usuario })
+    });
+    alert("Cartão excluído com sucesso!");
+  } catch (e) {}
+  carregarCartoesView();
+}
+
+async function deletarInvestimento(id) {
+  if (!confirm("Deseja excluir este investimento?")) return;
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'deleteInvestimento', payload: { id: id }, userId: currentUser.ID_Usuario })
+    });
+    alert("Investimento excluído!");
+  } catch (e) {}
+  carregarInvestimentosView();
 }
 
 function formatarMoeda(val) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 }
 
-async function carregarSaudeFinanceiraView() {
-  const mesAno = getMesAnoFormatado();
-  let totalReceita = 6360.72;
-  let essenciais = 3307.57; // ~52%
-  let investimentos = 1781.00; // ~28%
-  let educacao = 508.85; // ~8%
-  let estiloLivre = 763.28; // ~12%
-
-  try {
-    const res = await fetch(`${API_URL}?action=getDashboard&userId=${currentUser.ID_Usuario}&mesAno=${mesAno}`);
-    const data = await res.json();
-    if (data.status === "success" && data.totalReceitas > 0) {
-      totalReceita = data.totalReceitas;
-      if (data.educacaoFinanceira) {
-        essenciais = data.educacaoFinanceira.essenciais || (totalReceita * 0.52);
-        investimentos = data.educacaoFinanceira.investimentos || (totalReceita * 0.28);
-        educacao = data.educacaoFinanceira.educacao || (totalReceita * 0.08);
-        estiloLivre = data.educacaoFinanceira.livre || (totalReceita * 0.12);
-      }
-    }
-  } catch (err) {
-    console.log("Modo demonstração de Saúde Financeira ativo");
-  }
-
-  const pctEssenciais = Math.round((essenciais / totalReceita) * 100);
-  const pctInvest = Math.round((investimentos / totalReceita) * 100);
-  const pctEduc = Math.round((educacao / totalReceita) * 100);
-  const pctLivre = Math.round((estiloLivre / totalReceita) * 100);
-
-  // Renderizar Gráfico de Barras Comparativo
-  renderizarGraficoSaudeBarra([pctEssenciais, pctInvest, pctEduc, pctLivre]);
-
-  // Pontuação da Saúde Financeira (0 a 100)
-  const diffEssenciais = Math.abs(pctEssenciais - 50);
-  const diffInvest = Math.abs(pctInvest - 30);
-  const diffEduc = Math.abs(pctEduc - 10);
-  const diffLivre = Math.abs(pctLivre - 10);
-  const totalDiff = diffEssenciais + diffInvest + diffEduc + diffLivre;
-  const score = Math.max(0, Math.min(100, Math.round(100 - (totalDiff * 1.2))));
-
-  const scoreElem = document.getElementById("scoreSaudeNum");
-  if (scoreElem) scoreElem.textContent = score;
-
-  // Atualizar textos e barras
-  const txtEss = document.getElementById("txtEssenciais");
-  if (txtEss) txtEss.textContent = `${pctEssenciais}% (Ideal: 50%)`;
-  const barEss = document.getElementById("barEssenciais");
-  if (barEss) barEss.style.width = `${Math.min(100, pctEssenciais)}%`;
-
-  const txtInv = document.getElementById("txtInvest");
-  if (txtInv) txtInv.textContent = `${pctInvest}% (Ideal: 30%)`;
-  const barInv = document.getElementById("barInvest");
-  if (barInv) barInv.style.width = `${Math.min(100, pctInvest)}%`;
-
-  const txtEdu = document.getElementById("txtEduc");
-  if (txtEdu) txtEdu.textContent = `${pctEduc}% (Ideal: 10%)`;
-  const barEdu = document.getElementById("barEduc");
-  if (barEdu) barEdu.style.width = `${Math.min(100, pctEduc)}%`;
-
-  const txtLiv = document.getElementById("txtLivre");
-  if (txtLiv) txtLiv.textContent = `${pctLivre}% (Ideal: 10%)`;
-  const barLiv = document.getElementById("barLivre");
-  if (barLiv) barLiv.style.width = `${Math.min(100, pctLivre)}%`;
-}
-
-function renderizarGraficoSaudeBarra(realValues) {
-  const ctx = document.getElementById('saudeBarChart');
-  if (!ctx) return;
-
-  if (window.mySaudeBarChart) {
-    window.mySaudeBarChart.destroy();
-  }
-
-  window.mySaudeBarChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Despesas Essenciais', 'Investimentos', 'Educação', 'Estilo de Vida'],
-      datasets: [
-        {
-          label: 'Real do Usuário (%)',
-          data: realValues,
-          backgroundColor: '#06b6d4',
-          borderColor: '#0284c7',
-          borderWidth: 1,
-          borderRadius: 6
-        },
-        {
-          label: 'Alvo Parametrizado (%)',
-          data: [50, 30, 10, 10],
-          backgroundColor: '#10b981',
-          borderColor: '#059669',
-          borderWidth: 1,
-          borderRadius: 6
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: { color: '#f8fafc', font: { size: 12, weight: 'bold' } }
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              return `${context.dataset.label}: ${context.raw}%`;
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 100,
-          ticks: {
-            color: '#94a3b8',
-            callback: function(val) { return val + '%'; }
-          },
-          grid: { color: 'rgba(255, 255, 255, 0.05)' }
-        },
-        x: {
-          ticks: { color: '#f8fafc', font: { size: 11 } },
-          grid: { display: false }
-        }
-      }
-    }
-  });
-}
+function registrarTempoUso() {}
