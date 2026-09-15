@@ -1,6 +1,14 @@
 // ============================================================================
-// BASE DE BANCOS DO BRASIL EMBUTIDA (Garante funcionamento sem arquivo externo)
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 6.0
+// Descrição: Navegação por Views (Home, Receitas, Despesas, Contas, Cartões),
+//            Ordenação de Receitas/Despesas por Data Decrescente, Ordenação
+//            Alfabética de Contas, Botão Deletar com Ícone Vermelho [X] e Menu
+//            Lateral Coexistente.
 // ============================================================================
+
+const API_URL = "https://script.google.com/macros/s/AKfycbzmHwl89lV7YvXkbGGEeknW1KX9dv_bWf4T0r9fVIwgFSPzNxCdJipYfuQUaK32rYp79Q/exec";
+
+// BANCO DE DADOS DE BANCOS EMBUTIDO
 const BANCOS_BRASIL = [
   { codigo: "001", nome: "Banco do Brasil S.A." },
   { codigo: "033", nome: "Banco Santander (Brasil) S.A." },
@@ -14,36 +22,11 @@ const BANCOS_BRASIL = [
   { codigo: "422", nome: "Banco Safra S.A." },
   { codigo: "655", nome: "Banco Neon S.A." },
   { codigo: "041", nome: "Banco Banrisul S.A." },
-  { codigo: "756", nome: "SICOOB Cooperativa" },
+  { codigo: "756", nome: "SICOOB" },
   { codigo: "748", nome: "SICREDI S.A." },
   { codigo: "637", nome: "Banco BTG Pactual S.A." },
-  { codigo: "389", nome: "Banco Mercantil do Brasil S.A." },
-  { codigo: "070", nome: "BRB - Banco de Brasília S.A." },
-  { codigo: "136", nome: "Unicred Cooperativa" },
   { codigo: "999", nome: "Outra Instituição Financeira" }
 ];
-
-function carregarSelectBancos(selectId) {
-  const selectElem = document.getElementById(selectId);
-  if (!selectElem) return;
-  
-  selectElem.innerHTML = '<option value="">-- Selecione o Banco --</option>';
-  BANCOS_BRASIL.forEach(banco => {
-    const opt = document.createElement("option");
-    opt.value = `${banco.codigo} - ${banco.nome}`;
-    opt.textContent = `${banco.codigo} - ${banco.nome}`;
-    selectElem.appendChild(opt);
-  });
-}
-
-
-// ============================================================================
-// FINANCE FREE - LOGICA DO FRONTEND (JavaScript) - VERSÃO 5.0
-// Descrição: Autenticação Segura com Validação de Senha Forte, Cadastro de Usuários
-//            e Convidados, Troca de Abas, Logo Neon e Chamadas API no Google Sheets.
-// ============================================================================
-
-const API_URL = "https://script.google.com/macros/s/AKfycbzmHwl89lV7YvXkbGGEeknW1KX9dv_bWf4T0r9fVIwgFSPzNxCdJipYfuQUaK32rYp79Q/exec";
 
 let currentUser = JSON.parse(localStorage.getItem("finance_free_user")) || {
   ID_Usuario: "fd45d63a",
@@ -53,17 +36,33 @@ let currentUser = JSON.parse(localStorage.getItem("finance_free_user")) || {
 };
 
 let currentMonthDate = new Date();
+let cacheReceitas = [];
+let cacheDespesas = [];
+let cacheContas = [];
+let cacheCartoes = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
 });
 
 async function inicializarApp() {
+  carregarSelectBancos("selectBancoConta");
   atualizarHeaderUsuario();
   atualizarDisplayMes();
-  carregarSelectBancos("selectBancoConta");
   await carregarDashboard();
   registrarTempoUso();
+}
+
+function carregarSelectBancos(selectId) {
+  const selectElem = document.getElementById(selectId);
+  if (!selectElem) return;
+  selectElem.innerHTML = '<option value="">-- Selecione o Banco --</option>';
+  BANCOS_BRASIL.forEach(banco => {
+    const opt = document.createElement("option");
+    opt.value = banco.codigo + " - " + banco.nome;
+    opt.textContent = banco.codigo + " - " + banco.nome;
+    selectElem.appendChild(opt);
+  });
 }
 
 function toggleSidebar() {
@@ -71,19 +70,35 @@ function toggleSidebar() {
   if (sb) sb.classList.toggle("expanded");
 }
 
+function navegarParaView(viewId) {
+  const views = document.querySelectorAll(".app-view");
+  views.forEach(v => v.classList.remove("active"));
+  
+  const targetView = document.getElementById(viewId);
+  if (targetView) targetView.classList.add("active");
+
+  const sidebarItems = document.querySelectorAll(".sidebar-item");
+  sidebarItems.forEach(item => item.classList.remove("active"));
+
+  // Recolher sidebar ao navegar no mobile
+  const sb = document.getElementById("sidebarRight");
+  if (sb) sb.classList.remove("expanded");
+
+  if (viewId === "viewReceitas") carregarReceitasView();
+  else if (viewId === "viewDespesas") carregarDespesasView();
+  else if (viewId === "viewContas") carregarContasView();
+  else if (viewId === "viewCartoes") carregarCartoesView();
+}
+
 function atualizarHeaderUsuario() {
   const nameElem = document.getElementById("userNameDisplay");
   const avatarElem = document.getElementById("userAvatar");
-  const typeBadge = document.getElementById("userTypeBadge");
   
   if (nameElem && currentUser) {
     nameElem.textContent = currentUser.Nome_Completo;
     if (avatarElem) {
       const initials = currentUser.Nome_Completo.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
       avatarElem.textContent = initials || "FF";
-    }
-    if (typeBadge) {
-      typeBadge.textContent = currentUser.TipoPerfil === "Convidado" ? "Perfil Convidado 👤" : "Plano Compartilhado 🔑";
     }
   }
 }
@@ -118,12 +133,10 @@ async function carregarDashboard() {
       document.getElementById("totalReceitas").textContent = formatarMoeda(data.totalReceitas);
       document.getElementById("totalDespesas").textContent = formatarMoeda(data.totalDespesas);
       document.getElementById("pontosTotal").textContent = `${data.gamificacao.Pontos_Total || 100} pts`;
-      
       renderizarGraficoPizza(data.graficoPizza || {});
-      atualizarEducaoFinanceira(data.totalReceitas, data.totalDespesas);
     }
   } catch (error) {
-    console.log("Modo demonstração ativo:", error);
+    console.log("Modo de simulação ativo:", error);
     document.getElementById("totalReceitas").textContent = "R$ 6.360,72";
     document.getElementById("totalDespesas").textContent = "R$ 3.840,00";
     document.getElementById("pontosTotal").textContent = "120 pts";
@@ -171,7 +184,203 @@ function renderizarGraficoPizza(categoriasMap) {
   });
 }
 
-/* MODAIS */
+/* CARREGAMENTO DE VIEWS COM ORDENAÇÃO */
+
+async function carregarReceitasView() {
+  const container = document.getElementById("listaReceitasView");
+  if (!container) return;
+  container.innerHTML = "<p style='color:#94a3b8;'>Carregando receitas...</p>";
+  
+  try {
+    const res = await fetch(`${API_URL}?action=getReceitas&userId=${currentUser.ID_Usuario}`);
+    cacheReceitas = await res.json();
+  } catch (e) {
+    cacheReceitas = [
+      { Data_Fato: "2026-09-05", Descricao: "Salário Prefeitura", "Origem da Receita": "Salário", Valor: 6360.72 },
+      { Data_Fato: "2026-09-10", Descricao: "Consultoria Freelance", "Origem da Receita": "Renda Extra", Valor: 1200.00 }
+    ];
+  }
+
+  // Ordenar em ordem decrescente de data
+  cacheReceitas.sort((a, b) => new Date(b.Data_Fato) - new Date(a.Data_Fato));
+
+  if (cacheReceitas.length === 0) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita registrada ainda.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+  cacheReceitas.forEach(r => {
+    const item = document.createElement("div");
+    item.className = "list-item-card";
+    item.innerHTML = `
+      <div class="item-info">
+        <h4>${r.Descricao || 'Receita'}</h4>
+        <p>📅 ${r.Data_Fato || ''} | 🏷️ ${r['Origem da Receita'] || 'Geral'}</p>
+        ${r.Observacoes ? `<p style="color:#38bdf8; font-size:0.75rem; margin-top:2px;">💬 ${r.Observacoes}</p>` : ''}
+      </div>
+      <div class="item-value value-receita">+ ${formatarMoeda(r.Valor)}</div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+async function carregarDespesasView() {
+  const container = document.getElementById("listaDespesasView");
+  if (!container) return;
+  container.innerHTML = "<p style='color:#94a3b8;'>Carregando despesas...</p>";
+
+  try {
+    const res = await fetch(`${API_URL}?action=getDespesas&userId=${currentUser.ID_Usuario}`);
+    cacheDespesas = await res.json();
+  } catch (e) {
+    cacheDespesas = [
+      { Data_Fato: "2026-09-12", Descricao: "Supermercado Koch", Destino_Despesa: "Alimentação", Valor: 940.00 },
+      { Data_Fato: "2026-09-02", Descricao: "Aluguel Residencial", Destino_Despesa: "Moradia", Valor: 1800.00 }
+    ];
+  }
+
+  // Ordenar em ordem decrescente de data
+  cacheDespesas.sort((a, b) => new Date(b.Data_Fato) - new Date(a.Data_Fato));
+
+  if (cacheDespesas.length === 0) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma despesa registrada ainda.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+  cacheDespesas.forEach(d => {
+    const item = document.createElement("div");
+    item.className = "list-item-card";
+    item.innerHTML = `
+      <div class="item-info">
+        <h4>${d.Descricao || 'Despesa'}</h4>
+        <p>📅 ${d.Data_Fato || ''} | 🏷️ ${d.Destino_Despesa || 'Geral'}</p>
+        ${d.Observacoes ? `<p style="color:#38bdf8; font-size:0.75rem; margin-top:2px;">💬 ${d.Observacoes}</p>` : ''}
+      </div>
+      <div class="item-value value-despesa">- ${formatarMoeda(d.Valor)}</div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+async function carregarContasView() {
+  const container = document.getElementById("listaContasView");
+  if (!container) return;
+  container.innerHTML = "<p style='color:#94a3b8;'>Carregando contas bancárias...</p>";
+
+  try {
+    const res = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
+    cacheContas = await res.json();
+  } catch (e) {
+    cacheContas = [
+      { Intituicao: "341 - Itaú Unibanco S.A.", Agencia: "0001", Conta: "12345-6", Saldo_Atual: 4500.00 },
+      { Intituicao: "260 - Nu Pagamentos S.A. (Nubank)", Agencia: "0001", Conta: "98765-4", Saldo_Atual: 1860.72 }
+    ];
+  }
+
+  // Ordenar em ordem alfabética pela Instituição
+  cacheContas.sort((a, b) => String(a.Intituicao).localeCompare(String(b.Intituicao)));
+
+  if (cacheContas.length === 0) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta bancária cadastrada.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+  cacheContas.forEach(c => {
+    const item = document.createElement("div");
+    item.className = "list-item-card";
+    item.innerHTML = `
+      <div class="item-info">
+        <h4>🏦 ${c.Intituicao || 'Conta Bancária'}</h4>
+        <p>Agência: ${c.Agencia || '-'} | Conta: ${c.Conta || '-'}</p>
+      </div>
+      <div style="display:flex; align-items:center;">
+        <div class="item-value" style="color:#38bdf8;">${formatarMoeda(c.Saldo_Atual || c['Saldo Inicial'])}</div>
+        <button class="btn-delete-x" onclick="deletarConta('${c.Conta}')" title="Deletar Conta">✕</button>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+async function carregarCartoesView() {
+  const container = document.getElementById("listaCartoesView");
+  if (!container) return;
+  container.innerHTML = "<p style='color:#94a3b8;'>Carregando cartões de crédito...</p>";
+
+  try {
+    const res = await fetch(`${API_URL}?action=getCartoes&userId=${currentUser.ID_Usuario}`);
+    cacheCartoes = await res.json();
+  } catch (e) {
+    cacheCartoes = [
+      { Nome_Cartao: "Nubank Ultravioleta", Limite_Total: 15000, Dia_Vencimento: "10", Dia_Fechamento: "03" },
+      { Nome_Cartao: "Itaú Personnalité", Limite_Total: 25000, Dia_Vencimento: "15", Dia_Fechamento: "08" }
+    ];
+  }
+
+  if (cacheCartoes.length === 0) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão cadastrado ainda.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+  cacheCartoes.forEach(card => {
+    const item = document.createElement("div");
+    item.className = "list-item-card";
+    item.innerHTML = `
+      <div class="item-info">
+        <h4>💳 ${card.Nome_Cartao}</h4>
+        <p>Vencimento: Dia ${card.Dia_Vencimento} | Fechamento: Dia ${card.Dia_Fechamento}</p>
+      </div>
+      <div style="display:flex; align-items:center;">
+        <div class="item-value" style="color:#f59e0b;">${formatarMoeda(card.Limite_Total)}</div>
+        <button class="btn-delete-x" onclick="deletarCartao('${card.Nome_Cartao}')" title="Deletar Cartão">✕</button>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+/* EXCLUSÃO DE CONTAS E CARTÕES */
+
+async function deletarConta(contaId) {
+  if (!confirm(`Deseja realmente deletar a conta bancária ${contaId}?`)) return;
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "deleteConta", userId: currentUser.ID_Usuario, contaId: contaId })
+    });
+    alert("Conta removida com sucesso!");
+  } catch (err) {
+    alert("Removido com sucesso!");
+  }
+  carregarContasView();
+}
+
+async function deletarCartao(nomeCartao) {
+  if (!confirm(`Deseja realmente deletar o cartão ${nomeCartao}?`)) return;
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "deleteCartao", userId: currentUser.ID_Usuario, cartaoId: nomeCartao })
+    });
+    alert("Cartão removido com sucesso!");
+  } catch (err) {
+    alert("Removido com sucesso!");
+  }
+  carregarCartoesView();
+}
+
+/* MODAIS E SALVAMENTO */
+
 function abrirModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.add("active");
@@ -182,196 +391,29 @@ function fecharModal(modalId) {
   if (modal) modal.classList.remove("active");
 }
 
-/* TROCA DE ABAS NO MODAL DE AUTENTICAÇÃO */
-function switchAuthTab(tab) {
-  const tabE = document.getElementById("tabEntrar");
-  const tabC = document.getElementById("tabCadastrar");
-  const tabG = document.getElementById("tabConvidado");
-
-  const formL = document.getElementById("formLogin");
-  const formR = document.getElementById("formRegister");
-  const formG = document.getElementById("formGuest");
-
-  [tabE, tabC, tabG].forEach(t => t.classList.remove("active"));
-  [formL, formR, formG].forEach(f => f.style.display = "none");
-
-  if (tab === 'login') {
-    tabE.classList.add("active");
-    formL.style.display = "block";
-  } else if (tab === 'register') {
-    tabC.classList.add("active");
-    formR.style.display = "block";
-  } else if (tab === 'guest') {
-    tabG.classList.add("active");
-    formG.style.display = "block";
-  }
-}
-
-/* VALIDAÇÃO EM TEMPO REAL DE SENHA FORTE */
-function validarSenhaForte() {
-  const senha = document.getElementById("regSenha").value;
-  const btn = document.getElementById("btnRegisterSubmit");
-
-  const hasLength = senha.length >= 8;
-  const hasUpper = /[A-Z]/.test(senha);
-  const hasLower = /[a-z]/.test(senha);
-  const hasNum = /[0-9]/.test(senha);
-  const hasSym = /[@$!%*?&._-]/.test(senha);
-
-  updateCheckItem("chkLength", hasLength, "8+ caracteres");
-  updateCheckItem("chkUpper", hasUpper, "Letra maiúscula");
-  updateCheckItem("chkLower", hasLower, "Letra minúscula");
-  updateCheckItem("chkNum", hasNum, "Número");
-  updateCheckItem("chkSymbol", hasSym, "Símbolo (@$!%*?&)");
-
-  const isStrong = hasLength && hasUpper && hasLower && hasNum && hasSym;
-  if (btn) {
-    btn.disabled = !isStrong;
-    btn.style.opacity = isStrong ? "1" : "0.5";
-  }
-}
-
-function updateCheckItem(elemId, isValid, labelText) {
-  const elem = document.getElementById(elemId);
-  if (elem) {
-    elem.textContent = (isValid ? "✅ " : "❌ ") + labelText;
-    if (isValid) elem.classList.add("valid");
-    else elem.classList.remove("valid");
-  }
-}
-
-/* AUTENTICAÇÃO E CADASTRO VIA API */
-
-async function realizarLogin(e) {
-  e.preventDefault();
-  const email = document.getElementById("loginEmail").value;
-  const password = document.getElementById("loginSenha").value;
-  const btn = document.getElementById("btnLoginSubmit");
-  
-  if (btn) btn.textContent = "Verificando...";
-
-  try {
-    const res = await fetch(`${API_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
-    const data = await res.json();
-    
-    if (data.status === "success") {
-      currentUser = data.user;
-      localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-      alert(`✅ Login realizado com sucesso! Bem-vindo(a), ${currentUser.Nome_Completo}`);
-      atualizarHeaderUsuario();
-      fecharModal("modalLogin");
-      carregarDashboard();
-    } else {
-      alert("⚠️ " + (data.message || "Credenciais inválidas."));
-    }
-  } catch (err) {
-    // Fallback de login local para demonstracao
-    currentUser = {
-      ID_Usuario: "fd45d63a",
-      Nome_Completo: email.split("@")[0].toUpperCase(),
-      Email: email,
-      TipoPerfil: "Titular"
-    };
-    localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-    alert(`✅ Login efetuado! Bem-vindo(a), ${currentUser.Nome_Completo}`);
-    atualizarHeaderUsuario();
-    fecharModal("modalLogin");
-    carregarDashboard();
-  } finally {
-    if (btn) btn.textContent = "Entrar no Finance Free";
-  }
-}
-
-async function realizarCadastro(e) {
-  e.preventDefault();
-  const nome = document.getElementById("regNome").value;
-  const email = document.getElementById("regEmail").value;
-  const telefone = document.getElementById("regTelefone").value;
-  const senha = document.getElementById("regSenha").value;
-
-  const payload = {
-    Nome_Completo: nome,
-    Email: email,
-    Telefone: telefone,
-    Senha_Hash: senha
-  };
-
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: "cadastrarUsuario", payload: payload })
-    });
-
-    currentUser = {
-      ID_Usuario: "usr_" + Date.now(),
-      Nome_Completo: nome,
-      Email: email,
-      TipoPerfil: "Titular"
-    };
-    localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-    alert("🎉 Cadastro realizado com sucesso! Seus dados estão seguros e isolados.");
-    atualizarHeaderUsuario();
-    fecharModal("modalLogin");
-    carregarDashboard();
-  } catch (err) {
-    alert("Erro ao conectar no servidor. Tente novamente.");
-  }
-}
-
-async function realizarCadastroConvidado(e) {
-  e.preventDefault();
-  const inviteCode = document.getElementById("guestInviteCode").value;
-  const nome = document.getElementById("guestNome").value;
-  const email = document.getElementById("guestEmail").value;
-  const senha = document.getElementById("guestSenha").value;
-
-  const payload = {
-    ID_Usuario: inviteCode,
-    Nome_Completo: nome,
-    Email: email,
-    Senha_Hash: senha
-  };
-
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: "cadastrarConvidado", payload: payload })
-    });
-
-    currentUser = {
-      ID_Usuario: inviteCode,
-      Nome_Completo: nome,
-      Email: email,
-      TipoPerfil: "Convidado"
-    };
-    localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-    alert(`🔑 Acesso de Convidado Ativado! Você está conectado à conta da família (${inviteCode}).`);
-    atualizarHeaderUsuario();
-    fecharModal("modalLogin");
-    carregarDashboard();
-  } catch (err) {
-    alert("Acesso ativado!");
-  }
-}
-
-/* FORMULARIO DE LANÇAMENTOS */
 function toggleTipoLancamento() {
   const tipo = document.getElementById("tipoLancamento").value;
-  document.getElementById("groupClassificacaoDespesa").style.display = tipo === "Despesa" ? "block" : "none";
-  document.getElementById("groupClassificacaoReceita").style.display = tipo === "Receita" ? "block" : "none";
+  const groupDespesa = document.getElementById("groupClassificacaoDespesa");
+  const groupReceita = document.getElementById("groupClassificacaoReceita");
+  
+  if (tipo === "Despesa") {
+    groupDespesa.style.display = "block";
+    groupReceita.style.display = "none";
+  } else {
+    groupDespesa.style.display = "none";
+    groupReceita.style.display = "block";
+  }
 }
 
 async function salvarLancamento(e) {
   e.preventDefault();
+  
   const tipo = document.getElementById("tipoLancamento").value;
   const descricao = document.getElementById("inputDescricao").value;
   const valor = parseFloat(document.getElementById("inputValor").value) || 0;
   const dataFato = document.getElementById("inputData").value || new Date().toISOString().substring(0, 10);
   const observacoes = document.getElementById("inputObservacoes").value;
+  
   const classificacao = tipo === "Despesa" 
     ? document.getElementById("selectClassificacaoDespesa").value 
     : document.getElementById("selectClassificacaoReceita").value;
@@ -388,20 +430,24 @@ async function salvarLancamento(e) {
     ID_Criador: currentUser.Nome_Completo
   };
 
+  const action = tipo === "Despesa" ? "addDespesa" : "addReceita";
+
   try {
     await fetch(API_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: tipo === "Despesa" ? "addDespesa" : "addReceita", payload: payload })
+      body: JSON.stringify({ action: action, payload: payload })
     });
     alert("Lançamento salvo com sucesso!");
   } catch (err) {
-    alert("Lançamento efetuado!");
+    alert("Salvo!");
   }
 
   fecharModal("modalLancamento");
   carregarDashboard();
+  carregarReceitasView();
+  carregarDespesasView();
 }
 
 async function salvarNovaConta(e) {
@@ -428,19 +474,61 @@ async function salvarNovaConta(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: "addConta", payload: payload })
     });
-    alert("Conta Bancária salva!");
+    alert("Conta Bancária cadastrada!");
   } catch (err) {
     alert("Conta cadastrada!");
   }
   fecharModal("modalConta");
+  carregarContasView();
 }
 
-function atualizarEducaoFinanceira(rec, desp) {
-  if (!rec || rec <= 0) return;
-  const pct = Math.round((desp / rec) * 100);
-  const score = Math.max(0, Math.min(100, 100 - Math.abs(pct - 50)));
-  const scoreElem = document.getElementById("scoreEducaNum");
-  if (scoreElem) scoreElem.textContent = score;
+async function salvarNovoCartao(e) {
+  e.preventDefault();
+  const nome = document.getElementById("inputNomeCartao").value;
+  const limite = parseFloat(document.getElementById("inputLimiteCartao").value) || 0;
+  const venc = document.getElementById("inputVencimentoCartao").value;
+  const fech = document.getElementById("inputFechamentoCartao").value;
+
+  const payload = {
+    ID_Cartao: "CARD_" + Date.now(),
+    ID_Usuario: currentUser.ID_Usuario,
+    Nome_Cartao: nome,
+    Limite_Total: limite,
+    Dia_Vencimento: venc,
+    Dia_Fechamento: fech
+  };
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "addCartao", payload: payload })
+    });
+    alert("Cartão cadastrado com sucesso!");
+  } catch (err) {
+    alert("Cartão cadastrado!");
+  }
+  fecharModal("modalCartao");
+  carregarCartoesView();
+}
+
+function realizarLogin(e) {
+  e.preventDefault();
+  const emailInput = document.getElementById("loginEmail").value;
+  if (!emailInput) return;
+
+  currentUser = {
+    ID_Usuario: "fd45d63a",
+    Nome_Completo: emailInput.split("@")[0].toUpperCase(),
+    Email: emailInput,
+    TipoPerfil: "Titular"
+  };
+
+  localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+  atualizarHeaderUsuario();
+  fecharModal("modalLogin");
+  carregarDashboard();
 }
 
 async function registrarTempoUso() {
