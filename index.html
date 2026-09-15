@@ -219,6 +219,49 @@
       </section>
     </div>
 
+    <!-- VIEW 8: CONVIDAR PARCEIRO (ENVIAR CONVITE POR E-MAIL) -->
+    <div class="app-view" id="viewConvidarParceiro">
+      <div class="view-header">
+        <h2>🤝 Convidar Parceiro(a)</h2>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
+          Envie um convite por e-mail para que seu cônjuge ou parceiro(a) acesse a mesma conta familiar.
+        </p>
+      </div>
+
+      <!-- CARD DO CÓDIGO DO TITULAR -->
+      <div class="card" style="margin-bottom: 20px; border: 1px dashed var(--accent-green); background: rgba(16, 185, 129, 0.05);">
+        <div class="card-title" style="color: var(--accent-green);">Seu Código de Acesso (ID de Titular)</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+          <span id="displaySeuIDPage" style="font-size: 1.3rem; font-weight: bold; color: var(--text-main); letter-spacing: 1px;">-</span>
+          <button class="btn-add-inline" onclick="copiarCodigoTitular()">📋 Copiar Código</button>
+        </div>
+      </div>
+
+      <!-- FORMULÁRIO DE CONVITE POR E-MAIL -->
+      <section class="app-section">
+        <div class="section-title">Enviar Convite por E-mail</div>
+        <form onsubmit="salvarEnviarConviteEmail(event)">
+          <div class="form-group">
+            <label>Nome do Convidado(a)</label>
+            <input type="text" class="form-control" id="inputNomeConvidadoPage" placeholder="Ex: Julita Rodrigues" required>
+          </div>
+          <div class="form-group">
+            <label>E-mail do Convidado(a)</label>
+            <input type="email" class="form-control" id="inputEmailConvidadoPage" placeholder="exemplo@hotmail.com" required>
+          </div>
+          <button type="submit" class="btn-submit" id="btnEnviarConviteSubmit">
+            ✉️ Enviar Convite por E-mail
+          </button>
+        </form>
+      </section>
+
+      <!-- LISTA DE PARCEIROS VINCULADOS / CONVITES ENVIADOS -->
+      <section class="app-section">
+        <div class="section-title">Parceiros Vinculados / Convites Enviados</div>
+        <div class="data-list" id="listaParceirosConvidadoView"></div>
+      </section>
+    </div>
+
   </main>
 
   <!-- MENU LATERAL DIREITO RETRÁTIL -->
