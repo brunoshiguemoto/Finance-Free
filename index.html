@@ -1,7 +1,6 @@
 <!-- ============================================================================
-     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 7.0.0
-     Descrição: Layout com Menu Lateral Coexistente (Recolhido / Expandido),
-                Views Dedicadas para Receitas, Despesas, Contas e Cartões.
+     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 9.0
+     Arquivo: index.html
      ============================================================================ -->
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -14,126 +13,151 @@
 </head>
 <body>
 
-  <div class="app-container">
-    
-    <!-- CONTEÚDO PRINCIPAL (DEMAIS VIEWS) -->
-    <main class="main-content" id="mainContent">
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="main-content" id="mainContent">
 
-      <!-- LOGO & CABEÇALHO SUPERIOR -->
-      <header class="app-header">
-        <div class="brand-wrapper" onclick="abrirModal('modalLogin')">
-          <img src="finance_free_logo.png" alt="Finance Free Logo" class="logo-img" onerror="this.style.display='none'">
-          <div class="brand-text">
-            <h1 id="userNameDisplay">Bruno Shiguemoto</h1>
-            <span>Finance-Free • Por Bruno Shiguemoto</span>
-          </div>
+    <!-- CABEÇALHO & USER PROFILE -->
+    <header class="app-header">
+      <div class="brand-wrapper" onclick="abrirModal('modalLogin')">
+        <img src="finance_free_logo.png" alt="Finance Free Logo" class="brand-logo" onerror="this.style.display='none'">
+        <div>
+          <h4 id="userNameDisplay">Bruno Shiguemoto</h4>
+          <span style="font-size: 0.72rem; color: #94a3b8;">Plano Familiar 🔑</span>
         </div>
-        <div class="gamification-pill">
-          🏆 <span id="pontosTotal">100 pts</span>
-        </div>
-      </header>
+      </div>
+      <div class="gamification-pill">
+        🏆 <span id="pontosTotal">100 pts</span>
+      </div>
+    </header>
 
-      <!-- VIEW 1: HOME / DASHBOARD -->
-      <div class="app-view active" id="viewHome">
-        
-        <!-- SELETOR MENSAL -->
-        <div class="month-selector">
-          <button class="month-btn" onclick="mudarMes(-1)">◀</button>
-          <h3 id="displayMes">Setembro 2026</h3>
-          <button class="month-btn" onclick="mudarMes(1)">▶</button>
-        </div>
-
-        <!-- CARDS DE RESUMO -->
-        <div class="summary-cards">
-          <div class="card" onclick="navegarParaView('viewReceitas')" style="cursor:pointer;">
-            <div class="card-title">Receitas do Mês ➔</div>
-            <div class="card-value value-receita" id="totalReceitas">R$ 0,00</div>
-          </div>
-          <div class="card" onclick="navegarParaView('viewDespesas')" style="cursor:pointer;">
-            <div class="card-title">Despesas do Mês ➔</div>
-            <div class="card-value value-despesa" id="totalDespesas">R$ 0,00</div>
-          </div>
-        </div>
-
-        <!-- GRÁFICO EM PIZZA DAS DESPESAS -->
-        <section class="app-section">
-          <div class="section-title">MAIORES GASTOS DO MÊS (DESPESAS)</div>
-          <div class="chart-wrapper">
-            <canvas id="despesasChart"></canvas>
-          </div>
-        </section>
-
+    <!-- VIEW 1: HOME / DASHBOARD -->
+    <div class="app-view active" id="viewHome">
+      <div class="month-selector">
+        <button class="month-btn" onclick="mudarMes(-1)">◀</button>
+        <h3 id="displayMes">Setembro 2026</h3>
+        <button class="month-btn" onclick="mudarMes(1)">▶</button>
       </div>
 
-      <!-- VIEW 2: RECEITAS -->
-      <div class="app-view" id="viewReceitas">
-        <div class="app-section">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="color:#10b981;">💰 Todas as Receitas</h3>
-            <button class="month-btn" onclick="navegarParaView('viewHome')">✖ Voltar</button>
-          </div>
-          <p style="font-size:0.78rem; color:#94a3b8; margin-bottom:12px;">Exibindo em ordem decrescente de data de registro.</p>
-          <div class="data-list" id="listaReceitasView"></div>
+      <div class="summary-cards">
+        <div class="card">
+          <div class="card-title">Receitas do Mês</div>
+          <div class="card-value value-receita" id="totalReceitas">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Despesas do Mês</div>
+          <div class="card-value value-despesa" id="totalDespesas">R$ 0,00</div>
         </div>
       </div>
 
-      <!-- VIEW 3: DESPESAS -->
-      <div class="app-view" id="viewDespesas">
-        <div class="app-section">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="color:#ef4444;">💸 Todas as Despesas</h3>
-            <button class="month-btn" onclick="navegarParaView('viewHome')">✖ Voltar</button>
-          </div>
-          <p style="font-size:0.78rem; color:#94a3b8; margin-bottom:12px;">Exibindo em ordem decrescente de data de registro.</p>
-          <div class="data-list" id="listaDespesasView"></div>
+      <section class="app-section">
+        <div class="section-title">MAIORES GASTOS DO MÊS (DESPESAS)</div>
+        <div class="chart-wrapper">
+          <canvas id="despesasChart"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <!-- VIEW 2: RECEITAS -->
+    <div class="app-view" id="viewReceitas">
+      <div class="view-header">
+        <h2>💰 Minhas Receitas</h2>
+      </div>
+      <div class="data-list" id="listaReceitasView"></div>
+    </div>
+
+    <!-- VIEW 3: DESPESAS -->
+    <div class="app-view" id="viewDespesas">
+      <div class="view-header">
+        <h2>💸 Minhas Despesas</h2>
+      </div>
+      <div class="data-list" id="listaDespesasView"></div>
+    </div>
+
+    <!-- VIEW 4: CONTAS BANCÁRIAS -->
+    <div class="app-view" id="viewContas">
+      <div class="section-header-flex">
+        <h2>🏦 Contas Bancárias</h2>
+        <button class="btn-add-inline" onclick="abrirModal('modalConta')">+ Nova Conta</button>
+      </div>
+      <div class="data-list" id="listaContasView" style="margin-top: 14px;"></div>
+    </div>
+
+    <!-- VIEW 5: CARTÕES DE CRÉDITO -->
+    <div class="app-view" id="viewCartoes">
+      <div class="section-header-flex">
+        <h2>💳 Cartões de Crédito</h2>
+        <button class="btn-add-inline" onclick="abrirModal('modalCartao')">+ Novo Cartão</button>
+      </div>
+      <div class="data-list" id="listaCartoesView" style="margin-top: 14px;"></div>
+    </div>
+
+    <!-- VIEW 6: INVESTIMENTOS & PATRIMÔNIO -->
+    <div class="app-view" id="viewInvestimentos">
+      <div class="view-header">
+        <h2>📈 Carteira de Investimentos & Patrimônio</h2>
+      </div>
+
+      <div class="summary-cards">
+        <div class="card">
+          <div class="card-title">Patrimônio Investido</div>
+          <div class="card-value value-receita" id="patrimonioTotalInvest">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Alinhamento de Carteira</div>
+          <div class="card-value" id="scoreInvestNumView" style="color: #8b5cf6;">90 pts</div>
         </div>
       </div>
 
-      <!-- VIEW 4: CONTAS BANCÁRIAS -->
-      <div class="app-view" id="viewContas">
-        <div class="app-section">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="color:#38bdf8;">🏦 Contas Bancárias</h3>
-            <button class="month-btn" onclick="navegarParaView('viewHome')">✖ Voltar</button>
-          </div>
-          <p style="font-size:0.78rem; color:#94a3b8; margin-bottom:12px;">Exibindo em ordem alfabética da instituição financeiras.</p>
-          <button class="btn-submit" onclick="abrirModal('modalConta')" style="margin-bottom:14px;">+ Cadastrar Nova Conta</button>
-          <div class="data-list" id="listaContasView"></div>
+      <section class="app-section">
+        <div class="section-title">DISTRIBUIÇÃO DE PATRIMÔNIO POR CATEGORIA</div>
+        <div class="chart-wrapper">
+          <canvas id="investimentosChart"></canvas>
         </div>
-      </div>
+      </section>
 
-      <!-- VIEW 5: CARTÕES DE CRÉDITO -->
-      <div class="app-view" id="viewCartoes">
-        <div class="app-section">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="color:#f59e0b;">💳 Cartões de Crédito</h3>
-            <button class="month-btn" onclick="navegarParaView('viewHome')">✖ Voltar</button>
-          </div>
-          <button class="btn-submit" onclick="abrirModal('modalCartao')" style="margin-bottom:14px;">+ Cadastrar Novo Cartão</button>
-          <div class="data-list" id="listaCartoesView"></div>
+      <section class="app-section">
+        <div class="section-header-flex">
+          <div class="section-title">MEUS ATIVOS DE INVESTIMENTO</div>
+          <button class="btn-add-inline" onclick="abrirModal('modalNovoInvestimento')">+ Novo Investimento</button>
         </div>
-      </div>
+        <div class="data-list" id="listaInvestimentosView"></div>
+      </section>
+    </div>
 
-    </main>
+  </main>
 
-    <!-- MENU LATERAL DIREITO (COEXISTE QUANDO RECOLHIDO, SOBREPÕE QUANDO EXPANDIDO) -->
-    <aside class="sidebar-right" id="sidebarRight">
-      <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
-      <nav class="sidebar-nav">
-        <a class="sidebar-item" onclick="navegarParaView('viewHome')"><span class="sidebar-icon">📊</span><span class="sidebar-label">Home</span></a>
-        <a class="sidebar-item" onclick="navegarParaView('viewReceitas')"><span class="sidebar-icon">💰</span><span class="sidebar-label">Receitas</span></a>
-        <a class="sidebar-item" onclick="navegarParaView('viewDespesas')"><span class="sidebar-icon">💸</span><span class="sidebar-label">Despesas</span></a>
-        <a class="sidebar-item" onclick="navegarParaView('viewContas')"><span class="sidebar-icon">🏦</span><span class="sidebar-label">Contas Bancárias</span></a>
-        <a class="sidebar-item" onclick="navegarParaView('viewCartoes')"><span class="sidebar-icon">💳</span><span class="sidebar-label">Cartões de Crédito</span></a>
-        <a class="sidebar-item" onclick="abrirModal('modalEduca')"><span class="sidebar-icon">🎓</span><span class="sidebar-label">Educação Financeira</span></a>
-        <a class="sidebar-item" onclick="abrirModal('modalInvest')"><span class="sidebar-icon">📈</span><span class="sidebar-label">Investimentos</span></a>
-        <a class="sidebar-item" onclick="abrirModal('modalLogin')"><span class="sidebar-icon">🔑</span><span class="sidebar-label">Login / Perfil</span></a>
-      </nav>
-    </aside>
+  <!-- MENU LATERAL DIREITO (NEON RETRÁTIL / COEXISTENTE) -->
+  <aside class="sidebar-right" id="sidebarRight">
+    <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item active" onclick="navegarParaView('viewHome')">
+        <span class="sidebar-icon">📊</span><span class="sidebar-label">Home</span>
+      </a>
+      <a class="sidebar-item" onclick="navegarParaView('viewReceitas')">
+        <span class="sidebar-icon">💰</span><span class="sidebar-label">Receitas</span>
+      </a>
+      <a class="sidebar-item" onclick="navegarParaView('viewDespesas')">
+        <span class="sidebar-icon">💸</span><span class="sidebar-label">Despesas</span>
+      </a>
+      <a class="sidebar-item" onclick="navegarParaView('viewContas')">
+        <span class="sidebar-icon">🏦</span><span class="sidebar-label">Contas</span>
+      </a>
+      <a class="sidebar-item" onclick="navegarParaView('viewCartoes')">
+        <span class="sidebar-icon">💳</span><span class="sidebar-label">Cartões</span>
+      </a>
+      <a class="sidebar-item" onclick="navegarParaView('viewInvestimentos')">
+        <span class="sidebar-icon">📈</span><span class="sidebar-label">Investimentos</span>
+      </a>
+      <a class="sidebar-item" onclick="abrirModal('modalEduca')">
+        <span class="sidebar-icon">🎓</span><span class="sidebar-label">Educação Financeira</span>
+      </a>
+      <a class="sidebar-item" onclick="abrirModal('modalLogin')">
+        <span class="sidebar-icon">🔑</span><span class="sidebar-label">Login / Perfil</span>
+      </a>
+    </nav>
+  </aside>
 
-  </div>
-
-  <!-- BOTÃO FLUTUANTE (+): ABRE MODAL DE LANÇAMENTO EM QUALQUER PÁGINA -->
+  <!-- BOTÃO FLUTUANTE DE (+) LANÇAMENTO RÁPIDO -->
   <button class="btn-floating-add" onclick="abrirModal('modalLancamento')">+</button>
 
   <!-- MODAL 1: LANÇAMENTO RÁPIDO (+) -->
@@ -154,7 +178,7 @@
 
         <div class="form-group">
           <label>Descrição</label>
-          <input type="text" class="form-control" id="inputDescricao" placeholder="Ex: Supermercado, Salário" required>
+          <input type="text" class="form-control" id="inputDescricao" placeholder="Ex: Supermercado, Luz, Salário" required>
         </div>
 
         <div class="form-group">
@@ -236,7 +260,7 @@
     </div>
   </div>
 
-  <!-- MODAL 3: CADASTRO DE CARTÕES DE CRÉDITO -->
+  <!-- MODAL 3: CADASTRO DE CARTÃO DE CRÉDITO -->
   <div class="modal-overlay" id="modalCartao">
     <div class="modal-card">
       <div class="modal-header">
@@ -246,26 +270,105 @@
       <form onsubmit="salvarNovoCartao(event)">
         <div class="form-group">
           <label>Nome do Cartão</label>
-          <input type="text" class="form-control" id="inputNomeCartao" placeholder="Ex: Nubank, Itaú Black" required>
+          <input type="text" class="form-control" id="inputNomeCartao" placeholder="Ex: Nubank Black, XP Visa Infinite" required>
         </div>
         <div class="form-group">
           <label>Limite Total (R$)</label>
           <input type="number" step="0.01" class="form-control" id="inputLimiteCartao" placeholder="0.00" required>
         </div>
         <div class="form-group">
-          <label>Dia do Vencimento</label>
-          <input type="number" min="1" max="31" class="form-control" id="inputVencimentoCartao" placeholder="10" required>
+          <label>Dia do Fechamento</label>
+          <input type="number" min="1" max="31" class="form-control" id="inputDiaFechamento" placeholder="Ex: 5">
         </div>
         <div class="form-group">
-          <label>Dia do Fechamento</label>
-          <input type="number" min="1" max="31" class="form-control" id="inputFechamentoCartao" placeholder="03" required>
+          <label>Dia do Vencimento</label>
+          <input type="number" min="1" max="31" class="form-control" id="inputDiaVencimento" placeholder="Ex: 12">
         </div>
         <button type="submit" class="btn-submit">Cadastrar Cartão</button>
       </form>
     </div>
   </div>
 
-  <!-- MODAL 4: LOGIN / PERFIL -->
+  <!-- MODAL 4: CADASTRO DE NOVO INVESTIMENTO -->
+  <div class="modal-overlay" id="modalNovoInvestimento">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Cadastrar Investimento</h3>
+        <button class="close-btn" onclick="fecharModal('modalNovoInvestimento')">✕</button>
+      </div>
+      <form onsubmit="salvarNovoInvestimento(event)">
+        <div class="form-group">
+          <label>Tipo de Operação</label>
+          <select class="form-control" id="selectTipoInvestOp">
+            <option value="Saldo Inicial">Saldo Inicial 🏦</option>
+            <option value="Aquisição de Cotas">Aquisição de Cotas 📈</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Classificação do Investimento</label>
+          <select class="form-control" id="selectCategoriaInvest" required>
+            <option value="Ações">Ações</option>
+            <option value="FIIs">FIIs (Títulos / Fundos Imobiliários)</option>
+            <option value="Previdência Privada">Previdência Privada</option>
+            <option value="Crypto">Crypto (Criptomoedas)</option>
+            <option value="Ativos Internacionais">Ativos Internacionais</option>
+            <option value="Tesouro Direto">Tesouro Direto</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Nome do Ativo / Código</label>
+          <input type="text" class="form-control" id="inputNomeAtivoInvest" placeholder="Ex: PETR4, HGLG11, BTC, AAPL, Tesouro Selic 2029" required>
+        </div>
+
+        <div class="form-group">
+          <label>Valor Total / Saldo (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="inputValorInvest" placeholder="0.00" required>
+        </div>
+
+        <div class="form-group">
+          <label>Quantidade de Cotas / Ações (Opcional)</label>
+          <input type="number" step="0.000001" class="form-control" id="inputCotasInvest" placeholder="Ex: 10.5">
+        </div>
+
+        <div class="form-group">
+          <label>Data da Operação</label>
+          <input type="date" class="form-control" id="inputDataInvest">
+        </div>
+
+        <div class="form-group">
+          <label>Observações / Anotações</label>
+          <textarea class="form-control" id="inputObsInvest" rows="2" placeholder="Ex: Aporte mensal estratégico para a carteira..."></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Salvar Investimento</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: EDUCAÇÃO FINANCEIRA (50 / 30 / 10 / 10) -->
+  <div class="modal-overlay" id="modalEduca">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🎓 Educação Financeira</h3>
+        <button class="close-btn" onclick="fecharModal('modalEduca')">✕</button>
+      </div>
+      <div class="card" style="text-align: center; margin-bottom: 14px;">
+        <div style="font-size: 0.8rem; color: #94a3b8;">SAÚDE FINANCEIRA MENSAL</div>
+        <div id="scoreEducaNum" style="font-size: 2rem; font-weight: bold; color: #10b981;">85</div>
+        <div style="font-size: 0.8rem; color: #cbd5e1;">Regra Recomendada: 50/30/10/10</div>
+      </div>
+      <div style="font-size: 0.85rem; color: #cbd5e1;">
+        <p><strong>50% Essenciais:</strong> Moradia, Saúde, Alimentação.</p>
+        <p style="margin-top:8px;"><strong>30% Investimentos:</strong> Aportes de futuro.</p>
+        <p style="margin-top:8px;"><strong>10% Educação:</strong> Cursos e aprendizado.</p>
+        <p style="margin-top:8px;"><strong>10% Estilo de Vida:</strong> Lazer e lazer livre.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: LOGIN / REGISTRO DA SESSÃO -->
   <div class="modal-overlay" id="modalLogin">
     <div class="modal-card">
       <div class="modal-header">
@@ -277,48 +380,13 @@
           <label>Seu E-mail Cadastrado</label>
           <input type="email" class="form-control" id="loginEmail" placeholder="seuemail@exemplo.com" required>
         </div>
-        <button type="submit" class="btn-submit">Entrar na Conta</button>
+        <button type="submit" class="btn-submit" id="btnLoginSubmit">Entrar na Conta</button>
       </form>
     </div>
   </div>
 
-  <!-- MODAL 5: EDUCAÇÃO FINANCEIRA -->
-  <div class="modal-overlay" id="modalEduca">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title">🎓 Educação Financeira</h3>
-        <button class="close-btn" onclick="fecharModal('modalEduca')">✕</button>
-      </div>
-      <div class="score-card">
-        <div style="font-size: 0.82rem; color: #94a3b8;">SAÚDE FINANCEIRA MENSAL</div>
-        <div class="score-number" id="scoreEducaNum">85</div>
-        <div style="font-size: 0.85rem; color: #10b981;">Meta Recomendada: 50/30/10/10</div>
-      </div>
-      <div style="font-size: 0.85rem; color: #cbd5e1;">
-        <p><strong>50% Despesas Essenciais:</strong> Moradia, Saúde, Alimentação.</p>
-        <p style="margin-top:8px;"><strong>30% Investimentos & Futuro:</strong> Aportes ativos.</p>
-        <p style="margin-top:8px;"><strong>10% Educação & Crescimento:</strong> Cursos e livros.</p>
-        <p style="margin-top:8px;"><strong>10% Gastos Livres:</strong> Lazer e estilo de vida.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 6: INVESTIMENTOS -->
-  <div class="modal-overlay" id="modalInvest">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title">📈 Carteira de Investimentos</h3>
-        <button class="close-btn" onclick="fecharModal('modalInvest')">✕</button>
-      </div>
-      <div class="score-card">
-        <div style="font-size: 0.82rem; color: #94a3b8;">ALINHAMENTO DE CARTEIRA</div>
-        <div class="score-number" id="scoreInvestNum" style="color: #8b5cf6;">90</div>
-        <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 4px;">Alvo: 25% Ações | 25% FIIs | 15% Prev | 10% Crypto | 25% Tesouro</div>
-      </div>
-    </div>
-  </div>
-
   <!-- SCRIPTS -->
+  <script src="bancos_brasil.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
