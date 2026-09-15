@@ -461,7 +461,6 @@ function abrirModal(modalId) {
     toggleTipoLancamento();
   }
 }
-}
 
 function fecharModal(modalId) {
   const modal = document.getElementById(modalId);
