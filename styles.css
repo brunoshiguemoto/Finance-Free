@@ -1,5 +1,5 @@
 /* ============================================================================
-   FINANCE FREE - ESTILOS CSS3 (DARK MODE NEON) - VERSÃO 9.0
+   FINANCE FREE - ESTILOS CSS3 (DARK MODE NEON) - VERSÃO 12.0
    Arquivo: styles.css
    ============================================================================ */
 
@@ -320,9 +320,9 @@ body {
 .btn-floating-add {
   position: fixed;
   bottom: 24px;
-  right: 80px;
-  width: 56px;
-  height: 56px;
+  left: 24px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   background: var(--accent-green);
   color: #000;
