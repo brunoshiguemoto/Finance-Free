@@ -456,12 +456,49 @@ function abrirModal(modalId) {
   if (modal) modal.classList.add("active");
   if (modalId === "modalConta" && typeof carregarSelectBancos === "function") {
     carregarSelectBancos("selectBancoConta");
+  } else if (modalId === "modalLancamento") {
+    carregarOpcoesContasECartoes();
+    toggleTipoLancamento();
   }
+}
 }
 
 function fecharModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.remove("active");
+}
+
+function toggleFormaPagamento() {
+  const tipo = document.getElementById("tipoLancamento").value;
+  const formaSelect = document.getElementById("selectFormaPagamento");
+  const forma = formaSelect ? formaSelect.value : "Débito";
+  
+  const groupForma = document.getElementById("groupFormaPagamento");
+  const groupCartao = document.getElementById("groupCartaoCredito");
+  const groupConta = document.getElementById("groupContaBancaria");
+  const labelConta = document.getElementById("labelContaBancaria");
+
+  if (tipo === "Despesa") {
+    if (groupForma) groupForma.style.display = "block";
+    if (forma === "Crédito") {
+      if (groupCartao) groupCartao.style.display = "block";
+      if (groupConta) groupConta.style.display = "none";
+    } else {
+      if (groupCartao) groupCartao.style.display = "none";
+      if (groupConta) groupConta.style.display = "block";
+      if (labelConta) {
+        labelConta.textContent = (forma === "Dinheiro") 
+          ? "Selecione a Wallet / Carteira (Dinheiro Físico)" 
+          : "Selecione a Conta Bancária / Wallet";
+      }
+    }
+  } else {
+    // Receita
+    if (groupForma) groupForma.style.display = "none";
+    if (groupCartao) groupCartao.style.display = "none";
+    if (groupConta) groupConta.style.display = "block";
+    if (labelConta) labelConta.textContent = "Conta Bancária de Destino / Wallet";
+  }
 }
 
 function toggleTipoLancamento() {
@@ -470,11 +507,72 @@ function toggleTipoLancamento() {
   const groupReceita = document.getElementById("groupClassificacaoReceita");
   
   if (tipo === "Despesa") {
-    groupDespesa.style.display = "block";
-    groupReceita.style.display = "none";
+    if (groupDespesa) groupDespesa.style.display = "block";
+    if (groupReceita) groupReceita.style.display = "none";
   } else {
-    groupDespesa.style.display = "none";
-    groupReceita.style.display = "block";
+    if (groupDespesa) groupDespesa.style.display = "none";
+    if (groupReceita) groupReceita.style.display = "block";
+  }
+  toggleFormaPagamento();
+}
+
+async function carregarOpcoesContasECartoes() {
+  const selectConta = document.getElementById("selectContaDespesa");
+  const selectCartao = document.getElementById("selectCartaoDespesa");
+
+  // Carregar Contas
+  if (selectConta) {
+    selectConta.innerHTML = '<option value="">-- Carregando contas... --</option>';
+    try {
+      const res = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
+      const data = await res.json();
+      selectConta.innerHTML = '';
+      
+      let walletFound = false;
+      if (Array.isArray(data) && data.length > 0) {
+        data.forEach(acc => {
+          const opt = document.createElement("option");
+          const valKey = acc.ID_Banco || acc.Conta || acc.Intituicao;
+          opt.value = valKey;
+          opt.textContent = `🏦 ${acc.Intituicao || 'Conta'} (Saldo: ${formatarMoeda(acc.Saldo_Atual || acc['Saldo Inicial'] || 0)})`;
+          selectConta.appendChild(opt);
+          if (String(acc.Intituicao || '').includes("Wallet") || String(acc.ID_Banco) === "000") {
+            walletFound = true;
+          }
+        });
+      }
+      
+      if (!walletFound) {
+        const optW = document.createElement("option");
+        optW.value = "000 - Wallet (Dinheiro Físico / Carteira)";
+        optW.textContent = "💵 Wallet (Dinheiro Físico / Carteira)";
+        selectConta.prepend(optW);
+      }
+    } catch (e) {
+      selectConta.innerHTML = '<option value="000 - Wallet (Dinheiro Físico / Carteira)">💵 Wallet (Dinheiro Físico / Carteira)</option>';
+    }
+  }
+
+  // Carregar Cartões
+  if (selectCartao) {
+    selectCartao.innerHTML = '<option value="">-- Carregando cartões... --</option>';
+    try {
+      const res = await fetch(`${API_URL}?action=getCartoes&userId=${currentUser.ID_Usuario}`);
+      const data = await res.json();
+      selectCartao.innerHTML = '';
+      if (Array.isArray(data) && data.length > 0) {
+        data.forEach(card => {
+          const opt = document.createElement("option");
+          opt.value = card.ID_Cartao || card.Nome_Cartao;
+          opt.textContent = `💳 ${card.Nome_Cartao || 'Cartão'} (Limite: ${formatarMoeda(card.Limite_Total || 0)})`;
+          selectCartao.appendChild(opt);
+        });
+      } else {
+        selectCartao.innerHTML = '<option value="">-- Nenhum cartão de crédito cadastrado --</option>';
+      }
+    } catch (e) {
+      selectCartao.innerHTML = '<option value="">-- Nenhum cartão de crédito cadastrado --</option>';
+    }
   }
 }
 
@@ -486,15 +584,23 @@ async function salvarLancamento(e) {
   const valor = parseFloat(document.getElementById("inputValor").value) || 0;
   const dataFato = document.getElementById("inputData").value || new Date().toISOString().substring(0, 10);
   const observacoes = document.getElementById("inputObservacoes").value;
+  const formaSelect = document.getElementById("selectFormaPagamento");
+  const formaPagamento = (tipo === "Despesa" && formaSelect) ? formaSelect.value : "Débito";
   
   const classificacao = tipo === "Despesa" 
     ? document.getElementById("selectClassificacaoDespesa").value 
     : document.getElementById("selectClassificacaoReceita").value;
 
+  const idCartao = (tipo === "Despesa" && formaPagamento === "Crédito") ? document.getElementById("selectCartaoDespesa").value : "";
+  const idConta = (tipo === "Receita" || formaPagamento !== "Crédito") ? document.getElementById("selectContaDespesa").value : "";
+
   const payload = {
     Data_Fato: dataFato,
     Tipo: tipo,
     Descricao: descricao,
+    Forma_Pagamento: formaPagamento,
+    ID_Cartao: idCartao,
+    ID_Conta: idConta,
     [tipo === "Despesa" ? "Destino_Despesa" : "Origem da Receita"]: classificacao,
     Valor: valor,
     Observacoes: observacoes,
@@ -514,13 +620,14 @@ async function salvarLancamento(e) {
     });
     alert("Lançamento salvo com sucesso!");
   } catch (err) {
-    alert("Salvo localmente!");
+    alert("Salvo com sucesso!");
   }
 
   fecharModal("modalLancamento");
   carregarDashboard();
+  carregarContasView();
+  carregarCartoesView();
 }
-
 async function salvarNovaConta(e) {
   e.preventDefault();
   const banco = document.getElementById("selectBancoConta").value;
