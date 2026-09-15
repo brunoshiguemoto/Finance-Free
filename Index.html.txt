@@ -1,0 +1,236 @@
+<!-- ============================================================================
+     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5)
+     Arquivo: index.html
+     Descrição: Layout responsivo preparado para PWA / Android & iOS com Modais Interativos
+     ============================================================================ -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Finance Free</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Chart.js para o Gráfico de Pizza -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- CABEÇALHO & GAMIFICAÇÃO -->
+  <header class="app-header">
+    <div class="user-badge" onclick="abrirModalPerfil()">
+      <div class="avatar">BS</div>
+      <div>
+        <h4 style="font-size: 0.95rem;">Bruno Shiguemoto</h4>
+        <span style="font-size: 0.75rem; color: #94a3b8;">Plano Familiar</span>
+      </div>
+    </div>
+    <div class="gamification-pill" onclick="abrirModalMedalhas()">
+      🏆 <span id="pontosTotal">100 pts</span>
+    </div>
+  </header>
+
+  <!-- SELETOR DE MÊS -->
+  <div class="month-selector">
+    <button class="month-btn" onclick="mudarMes(-1)">◀</button>
+    <h3 id="displayMes">Setembro 2026</h3>
+    <button class="month-btn" onclick="mudarMes(1)">▶</button>
+  </div>
+
+  <!-- CARDS DE RESUMO -->
+  <div class="summary-cards">
+    <div class="card card-receita">
+      <div class="card-title">Receitas do Mês</div>
+      <div class="card-value value-receita" id="totalReceitas">R$ 0,00</div>
+    </div>
+    <div class="card card-despesa">
+      <div class="card-title">Despesas do Mês</div>
+      <div class="card-value value-despesa" id="totalDespesas">R$ 0,00</div>
+    </div>
+  </div>
+
+  <!-- GRÁFICO EM PIZZA DAS DESPESAS -->
+  <section class="chart-container">
+    <div class="chart-header">
+      <h4>MAIORES GASTOS DO MÊS</h4>
+      <span class="chart-subtitle" id="saldoMesText">Saldo: R$ 0,00</span>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="despesasChart"></canvas>
+    </div>
+  </section>
+
+  <!-- LISTA DE ÚLTIMOS LANÇAMENTOS DO MÊS -->
+  <section class="transactions-container">
+    <h4>LANÇAMENTOS DO MÊS</h4>
+    <div id="listaLancamentos" class="transactions-list">
+      <!-- Inserido dinamicamente via JS -->
+    </div>
+  </section>
+
+  <!-- NAVEGAÇÃO INFERIOR -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="mostrarAba('home')">📊 <span>Home</span></button>
+    <button class="nav-item" onclick="abrirModalContas()">🏦 <span>Contas</span></button>
+    <button class="btn-add-floating" onclick="abrirModalLancamento()" title="Novo Lançamento">+</button>
+    <button class="nav-item" onclick="abrirModalCartoes()">💳 <span>Cartões</span></button>
+    <button class="nav-item" onclick="abrirModalMedalhas()">🏅 <span>Medalhas</span></button>
+  </nav>
+
+  <!-- ============================================================================
+       MODAIS INTERATIVOS
+       ============================================================================ -->
+
+  <!-- MODAL DE NOVO LANÇAMENTO (RECEITA / DESPESA) -->
+  <div id="modalLancamento" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Novo Lançamento</h3>
+        <button class="modal-close" onclick="fecharModalLancamento()">✕</button>
+      </div>
+      
+      <div class="tipo-toggle">
+        <button type="button" id="btnTipoDespesa" class="toggle-btn active-despesa" onclick="setTipoLancamento('DESPESA')">💸 Despesa</button>
+        <button type="button" id="btnTipoReceita" class="toggle-btn" onclick="setTipoLancamento('RECEITA')">💰 Receita</button>
+      </div>
+
+      <form id="formLancamento" onsubmit="salvarLancamento(event)">
+        <div class="form-group">
+          <label for="inputDescricao">Descrição</label>
+          <input type="text" id="inputDescricao" placeholder="Ex: Mercado, Salário, Luz" required>
+        </div>
+
+        <div class="form-group">
+          <label for="inputValor">Valor (R$)</label>
+          <input type="number" step="0.01" id="inputValor" placeholder="0,00" required>
+        </div>
+
+        <div class="form-group">
+          <label for="selectCategoria" id="labelCategoria">Destino da Despesa</label>
+          <select id="selectCategoria" required>
+            <!-- Opções inseridas dinamicamente -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="inputDataFato">Data do Lançamento</label>
+          <input type="date" id="inputDataFato" required>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-cancelar" onclick="fecharModalLancamento()">Cancelar</button>
+          <button type="submit" class="btn-salvar">Salvar Lançamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONTAS BANCÁRIAS -->
+  <div id="modalContas" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🏦 Contas Bancárias</h3>
+        <button class="modal-close" onclick="fecharModalContas()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Selecione o banco brasileiro para registrar sua conta:</p>
+        <form id="formConta" onsubmit="salvarConta(event)">
+          <div class="form-group">
+            <label for="selectBanco">Instituição Financeira</label>
+            <select id="selectBanco" required></select>
+          </div>
+          <div class="form-group">
+            <label for="inputAgencia">Agência</label>
+            <input type="text" id="inputAgencia" placeholder="0001">
+          </div>
+          <div class="form-group">
+            <label for="inputConta">Número da Conta</label>
+            <input type="text" id="inputConta" placeholder="12345-6">
+          </div>
+          <div class="form-group">
+            <label for="inputSaldoInicial">Saldo Inicial (R$)</label>
+            <input type="number" step="0.01" id="inputSaldoInicial" placeholder="1000,00" required>
+          </div>
+          <button type="submit" class="btn-salvar" style="width: 100%;">Cadastrar Conta</button>
+        </form>
+
+        <h4 style="margin-top: 20px; font-size: 0.9rem; color: #94a3b8;">Suas Contas</h4>
+        <div id="listaContas" class="info-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CARTÕES DE CRÉDITO -->
+  <div id="modalCartoes" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>💳 Cartões de Crédito</h3>
+        <button class="modal-close" onclick="fecharModalCartoes()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="formCartao" onsubmit="salvarCartao(event)">
+          <div class="form-group">
+            <label for="inputNomeCartao">Nome / Apelido do Cartão</label>
+            <input type="text" id="inputNomeCartao" placeholder="Ex: Nubank, Itaú Black" required>
+          </div>
+          <div class="form-group">
+            <label for="inputLimiteTotal">Limite Total (R$)</label>
+            <input type="number" step="0.01" id="inputLimiteTotal" placeholder="5000,00" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="inputFechamento">Dia Fechamento</label>
+              <input type="number" min="1" max="31" id="inputFechamento" placeholder="10" required>
+            </div>
+            <div class="form-group">
+              <label for="inputVencimento">Dia Vencimento</label>
+              <input type="number" min="1" max="31" id="inputVencimento" placeholder="17" required>
+            </div>
+          </div>
+          <button type="submit" class="btn-salvar" style="width: 100%;">Cadastrar Cartão</button>
+        </form>
+
+        <h4 style="margin-top: 20px; font-size: 0.9rem; color: #94a3b8;">Cartões Cadastrados</h4>
+        <div id="listaCartoes" class="info-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE GAMIFICAÇÃO & MEDALHAS -->
+  <div id="modalMedalhas" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🏅 Suas Conquistas</h3>
+        <button class="modal-close" onclick="fecharModalMedalhas()">✕</button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="medal-badge-large">🏆</div>
+        <h3 id="modalNivelAtual" style="margin-top: 10px; color: #38bdf8;">Iniciante</h3>
+        <p style="color: #94a3b8; font-size: 0.85rem;">Pontuação Acumulada: <strong id="modalPontos" style="color: #f1f5f9;">100 pts</strong></p>
+        
+        <div class="badges-grid">
+          <div class="badge-item active-badge">
+            <span>🚀</span>
+            <small>Primeiro Acesso</small>
+          </div>
+          <div class="badge-item active-badge">
+            <span>📝</span>
+            <small>Primeiro Lançamento</small>
+          </div>
+          <div class="badge-item">
+            <span>📅</span>
+            <small>7 Dias Seguidos</small>
+          </div>
+          <div class="badge-item">
+            <span>💰</span>
+            <small>Meta de Poupança</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="bancos_brasil.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
