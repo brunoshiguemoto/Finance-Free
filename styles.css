@@ -1,48 +1,45 @@
 /* ============================================================================
-   FINANCE FREE - ESTILOS CSS3 MODERNOS (DARK MODE & NEON GLOW)
-   Arquivo: styles.css
+   FINANCE FREE - ESTILOS VISUAIS (CSS3) - VERSÃO 5.0
+   Descrição: Dark Mode Moderno, Efeito Neon Iluminado, Logo Minimalista,
+              Modais Responsivos, Checklist de Senha Forte e Sidebar Retrátil.
    ============================================================================ */
 
 :root {
-  --bg-main: #0b0f19;
-  --bg-card: #151c2c;
-  --bg-modal: #1e293b;
-  --accent-green: #10b981;
-  --accent-blue: #3b82f6;
-  --accent-purple: #8b5cf6;
-  --accent-orange: #f59e0b;
-  --accent-red: #ef4444;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #334155;
   --accent-cyan: #06b6d4;
+  --accent-gold: #f59e0b;
+  --accent-green: #10b981;
+  --accent-purple: #8b5cf6;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --border-color: #334155;
-  --glow-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+  --border-glow: rgba(6, 182, 212, 0.4);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  -webkit-tap-highlight-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 body {
-  background-color: var(--bg-main);
+  background-color: var(--bg-primary);
   color: var(--text-main);
   min-height: 100vh;
-  padding-bottom: 90px;
+  padding-bottom: 80px;
   overflow-x: hidden;
 }
 
-/* HEADER & USER BADGE */
+/* CABEÇALHO */
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  background-color: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .user-badge {
@@ -55,25 +52,24 @@ body {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
   color: #fff;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 1.1rem;
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 12px var(--border-glow);
 }
 
 .gamification-pill {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid var(--accent-green);
-  color: var(--accent-green);
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
   padding: 6px 14px;
   border-radius: 20px;
-  font-weight: 600;
   font-size: 0.85rem;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
 }
 
 /* SELETOR DE MÊS */
@@ -81,39 +77,35 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 20px;
-  background-color: #0e1526;
-  border-bottom: 1px solid var(--border-color);
+  margin: 16px 20px;
+  background: var(--bg-secondary);
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .month-btn {
   background: none;
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 1rem;
+  border: none;
+  color: var(--accent-cyan);
+  font-size: 1.1rem;
   cursor: pointer;
-  transition: all 0.2s;
-}
-
-.month-btn:active {
-  background-color: var(--accent-blue);
+  padding: 4px 10px;
 }
 
 /* CARDS DE RESUMO */
 .summary-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 16px 20px;
+  gap: 14px;
+  margin: 0 20px 20px 20px;
 }
 
 .card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  padding: 16px;
   border-radius: 14px;
-  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card-title {
@@ -124,57 +116,52 @@ body {
 }
 
 .card-value {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: bold;
 }
 
 .value-receita { color: var(--accent-green); }
-.value-despesa { color: var(--accent-red); }
+.value-despesa { color: #ef4444; }
 
-/* SEÇÕES DA TELA */
+/* SEÇÃO DE GRÁFICO */
 .app-section {
-  padding: 16px 20px;
+  margin: 0 20px;
+  background: var(--bg-secondary);
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .section-title {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   letter-spacing: 0.5px;
   margin-bottom: 12px;
-  text-transform: uppercase;
 }
 
 .chart-wrapper {
   position: relative;
-  height: 250px;
-  width: 100%;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 16px;
+  height: 220px;
 }
 
-/* MENU LATERAL DIREITO (NEON RETRÁTIL) */
+/* SIDEBAR LATERAL NEON (RETRÁTIL) */
 .sidebar-right {
   position: fixed;
   top: 0;
   right: 0;
   height: 100vh;
-  width: 64px;
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(12px);
-  border-left: 1px solid var(--border-color);
-  z-index: 1000;
+  width: 60px;
+  background: rgba(30, 41, 59, 0.95);
+  backdrop-filter: blur(10px);
+  border-left: 1px solid var(--border-glow);
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  overflow-x: hidden;
-  box-shadow: -5px 0 25px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  overflow: hidden;
 }
 
 .sidebar-right.expanded {
-  width: 240px;
+  width: 220px;
 }
 
 .sidebar-toggle {
@@ -182,21 +169,18 @@ body {
   height: 60px;
   background: none;
   border: none;
-  border-bottom: 1px solid var(--border-color);
   color: var(--accent-cyan);
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-left: 18px;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  margin-top: 10px;
+  padding-top: 10px;
 }
 
 .sidebar-item {
@@ -205,79 +189,62 @@ body {
   padding: 14px 18px;
   color: var(--text-muted);
   text-decoration: none;
-  width: 100%;
-  white-space: nowrap;
-  transition: all 0.2s;
   cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
 }
 
 .sidebar-item:hover, .sidebar-item.active {
-  color: #fff;
-  background: rgba(59, 130, 246, 0.15);
-  border-left: 3px solid var(--accent-blue);
+  color: var(--text-main);
+  background: rgba(6, 182, 212, 0.1);
+  border-left: 3px solid var(--accent-cyan);
 }
 
 .sidebar-icon {
   font-size: 1.3rem;
-  min-width: 32px;
-  filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.6));
+  min-width: 30px;
+  filter: drop-shadow(0 0 6px var(--accent-cyan));
 }
 
 .sidebar-label {
-  font-size: 0.92rem;
+  margin-left: 14px;
+  font-size: 0.9rem;
   font-weight: 500;
-  margin-left: 12px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.sidebar-right.expanded .sidebar-label {
-  opacity: 1;
 }
 
 /* BOTÃO FLUTUANTE DE (+) */
 .btn-floating-add {
   position: fixed;
   bottom: 24px;
-  right: 80px;
+  left: 24px;
   width: 58px;
   height: 58px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent-green), #059669);
   color: white;
+  font-size: 2rem;
   border: none;
-  font-size: 1.8rem;
-  font-weight: bold;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
   cursor: pointer;
-  z-index: 999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+  z-index: 90;
 }
 
-.btn-floating-add:active {
-  transform: scale(0.92);
-}
-
-/* MODAIS & FORMULÁRIOS */
+/* MODAIS & OVERLAYS */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(6px);
-  z-index: 2000;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
-  padding: 16px;
+  z-index: 200;
 }
 
 .modal-overlay.active {
@@ -286,15 +253,15 @@ body {
 }
 
 .modal-card {
-  background: var(--bg-modal);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  width: 100%;
+  background: var(--bg-secondary);
+  width: 90%;
   max-width: 440px;
   max-height: 90vh;
   overflow-y: auto;
+  border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--border-glow);
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.2);
 }
 
 .modal-header {
@@ -304,17 +271,11 @@ body {
   margin-bottom: 18px;
 }
 
-.modal-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #fff;
-}
-
 .close-btn {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   cursor: pointer;
 }
 
@@ -332,60 +293,113 @@ body {
 .form-control {
   width: 100%;
   padding: 12px 14px;
-  background: #0f172a;
-  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  color: #fff;
-  font-size: 0.95rem;
-  outline: none;
+  color: white;
+  font-size: 0.92rem;
 }
 
 .form-control:focus {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px var(--border-glow);
 }
 
 .btn-submit {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-  color: #fff;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+  color: white;
   border: none;
   border-radius: 12px;
-  font-weight: 600;
   font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   margin-top: 10px;
+  box-shadow: 0 0 15px var(--border-glow);
 }
 
-/* SCORE BADGES & EDUCAÇÃO FINANCIAL */
-.score-card {
-  background: linear-gradient(135deg, #1e1b4b, #0f172a);
-  border: 1px solid var(--accent-purple);
-  border-radius: 16px;
-  padding: 18px;
+/* LOGO NEON NO MODAL DE LOGIN */
+.logo-container {
   text-align: center;
+  margin-bottom: 18px;
+}
+
+.neon-logo-img {
+  max-width: 210px;
+  width: 100%;
+  border-radius: 16px;
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.35);
+}
+
+/* ABAS DE AUTENTICAÇÃO */
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-primary);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 8px 4px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.auth-tab.active {
+  background: var(--bg-secondary);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.3);
+}
+
+/* CHECKLIST DE SENHA FORTE */
+.password-checklist {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+.chk-item.valid {
+  color: var(--accent-green);
+}
+
+/* CARDS DE SCORE */
+.score-card {
+  text-align: center;
+  background: var(--bg-primary);
+  padding: 18px;
+  border-radius: 14px;
   margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .score-number {
   font-size: 2.8rem;
-  font-weight: 800;
-  color: var(--accent-cyan);
-  text-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
+  font-weight: bold;
+  color: var(--accent-green);
 }
 
 .progress-bar-bg {
-  background: #334155;
-  height: 10px;
-  border-radius: 5px;
+  background: var(--bg-primary);
+  height: 8px;
+  border-radius: 4px;
+  margin: 6px 0 14px 0;
   overflow: hidden;
-  margin: 8px 0;
 }
 
 .progress-bar-fill {
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan));
-  width: 0%;
-  transition: width 0.5s ease;
 }
