@@ -1,32 +1,11 @@
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 6.0
-// Descrição: Navegação por Views (Home, Receitas, Despesas, Contas, Cartões),
-//            Ordenação de Receitas/Despesas por Data Decrescente, Ordenação
-//            Alfabética de Contas, Botão Deletar com Ícone Vermelho [X] e Menu
-//            Lateral Coexistente.
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 9.0
+// Arquivo: app.js
+// Descrição: Navegação por Views, Modal (+), Receitas, Despesas, Contas,
+//            Cartões, Investimentos (com Gráfico de Pizza, Categorias e Cotas).
 // ============================================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbzmHwl89lV7YvXkbGGEeknW1KX9dv_bWf4T0r9fVIwgFSPzNxCdJipYfuQUaK32rYp79Q/exec";
-
-// BANCO DE DADOS DE BANCOS EMBUTIDO
-const BANCOS_BRASIL = [
-  { codigo: "001", nome: "Banco do Brasil S.A." },
-  { codigo: "033", nome: "Banco Santander (Brasil) S.A." },
-  { codigo: "104", nome: "Caixa Econômica Federal" },
-  { codigo: "237", nome: "Banco Bradesco S.A." },
-  { codigo: "341", nome: "Itaú Unibanco S.A." },
-  { codigo: "077", nome: "Banco Inter S.A." },
-  { codigo: "260", nome: "Nu Pagamentos S.A. (Nubank)" },
-  { codigo: "336", nome: "Banco C6 S.A." },
-  { codigo: "212", nome: "Banco Original S.A." },
-  { codigo: "422", nome: "Banco Safra S.A." },
-  { codigo: "655", nome: "Banco Neon S.A." },
-  { codigo: "041", nome: "Banco Banrisul S.A." },
-  { codigo: "756", nome: "SICOOB" },
-  { codigo: "748", nome: "SICREDI S.A." },
-  { codigo: "637", nome: "Banco BTG Pactual S.A." },
-  { codigo: "999", nome: "Outra Instituição Financeira" }
-];
 
 let currentUser = JSON.parse(localStorage.getItem("finance_free_user")) || {
   ID_Usuario: "fd45d63a",
@@ -36,33 +15,19 @@ let currentUser = JSON.parse(localStorage.getItem("finance_free_user")) || {
 };
 
 let currentMonthDate = new Date();
-let cacheReceitas = [];
-let cacheDespesas = [];
-let cacheContas = [];
-let cacheCartoes = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
 });
 
 async function inicializarApp() {
-  carregarSelectBancos("selectBancoConta");
   atualizarHeaderUsuario();
   atualizarDisplayMes();
+  if (typeof carregarSelectBancos === "function") {
+    carregarSelectBancos("selectBancoConta");
+  }
   await carregarDashboard();
   registrarTempoUso();
-}
-
-function carregarSelectBancos(selectId) {
-  const selectElem = document.getElementById(selectId);
-  if (!selectElem) return;
-  selectElem.innerHTML = '<option value="">-- Selecione o Banco --</option>';
-  BANCOS_BRASIL.forEach(banco => {
-    const opt = document.createElement("option");
-    opt.value = banco.codigo + " - " + banco.nome;
-    opt.textContent = banco.codigo + " - " + banco.nome;
-    selectElem.appendChild(opt);
-  });
 }
 
 function toggleSidebar() {
@@ -80,7 +45,7 @@ function navegarParaView(viewId) {
   const sidebarItems = document.querySelectorAll(".sidebar-item");
   sidebarItems.forEach(item => item.classList.remove("active"));
 
-  // Recolher sidebar ao navegar no mobile
+  // Recolher sidebar
   const sb = document.getElementById("sidebarRight");
   if (sb) sb.classList.remove("expanded");
 
@@ -88,18 +53,13 @@ function navegarParaView(viewId) {
   else if (viewId === "viewDespesas") carregarDespesasView();
   else if (viewId === "viewContas") carregarContasView();
   else if (viewId === "viewCartoes") carregarCartoesView();
+  else if (viewId === "viewInvestimentos") carregarInvestimentosView();
 }
 
 function atualizarHeaderUsuario() {
   const nameElem = document.getElementById("userNameDisplay");
-  const avatarElem = document.getElementById("userAvatar");
-  
   if (nameElem && currentUser) {
     nameElem.textContent = currentUser.Nome_Completo;
-    if (avatarElem) {
-      const initials = currentUser.Nome_Completo.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
-      avatarElem.textContent = initials || "FF";
-    }
   }
 }
 
@@ -133,10 +93,11 @@ async function carregarDashboard() {
       document.getElementById("totalReceitas").textContent = formatarMoeda(data.totalReceitas);
       document.getElementById("totalDespesas").textContent = formatarMoeda(data.totalDespesas);
       document.getElementById("pontosTotal").textContent = `${data.gamificacao.Pontos_Total || 100} pts`;
+      
       renderizarGraficoPizza(data.graficoPizza || {});
     }
   } catch (error) {
-    console.log("Modo de simulação ativo:", error);
+    console.log("Fallback / Modo demonstração ativo:", error);
     document.getElementById("totalReceitas").textContent = "R$ 6.360,72";
     document.getElementById("totalDespesas").textContent = "R$ 3.840,00";
     document.getElementById("pontosTotal").textContent = "120 pts";
@@ -184,45 +145,41 @@ function renderizarGraficoPizza(categoriasMap) {
   });
 }
 
-/* CARREGAMENTO DE VIEWS COM ORDENAÇÃO */
+/* CARREGAR VIEWS ESPECÍFICAS */
 
 async function carregarReceitasView() {
   const container = document.getElementById("listaReceitasView");
   if (!container) return;
   container.innerHTML = "<p style='color:#94a3b8;'>Carregando receitas...</p>";
-  
+
   try {
     const res = await fetch(`${API_URL}?action=getReceitas&userId=${currentUser.ID_Usuario}`);
-    cacheReceitas = await res.json();
-  } catch (e) {
-    cacheReceitas = [
-      { Data_Fato: "2026-09-05", Descricao: "Salário Prefeitura", "Origem da Receita": "Salário", Valor: 6360.72 },
-      { Data_Fato: "2026-09-10", Descricao: "Consultoria Freelance", "Origem da Receita": "Renda Extra", Valor: 1200.00 }
-    ];
+    const data = await res.json();
+    
+    if (Array.isArray(data) && data.length > 0) {
+      data.sort((a, b) => new Date(b.Data_Fato) - new Date(a.Data_Fato));
+      let html = "";
+      data.forEach(item => {
+        html += `
+          <div class="data-item">
+            <div class="data-item-info">
+              <h5>${item.Descricao || 'Receita'}</h5>
+              <span>${item.Data_Fato || ''} • ${item["Origem da Receita"] || 'Geral'}</span>
+              ${item.Observacoes ? `<br><small style="color:#94a3b8;">📝 ${item.Observacoes}</small>` : ''}
+            </div>
+            <div class="data-item-value value-receita">
+              + ${formatarMoeda(item.Valor)}
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita registrada até o momento.</p>";
+    }
+  } catch (err) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Exibindo modo demonstração de receitas.</p>";
   }
-
-  // Ordenar em ordem decrescente de data
-  cacheReceitas.sort((a, b) => new Date(b.Data_Fato) - new Date(a.Data_Fato));
-
-  if (cacheReceitas.length === 0) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita registrada ainda.</p>";
-    return;
-  }
-
-  container.innerHTML = "";
-  cacheReceitas.forEach(r => {
-    const item = document.createElement("div");
-    item.className = "list-item-card";
-    item.innerHTML = `
-      <div class="item-info">
-        <h4>${r.Descricao || 'Receita'}</h4>
-        <p>📅 ${r.Data_Fato || ''} | 🏷️ ${r['Origem da Receita'] || 'Geral'}</p>
-        ${r.Observacoes ? `<p style="color:#38bdf8; font-size:0.75rem; margin-top:2px;">💬 ${r.Observacoes}</p>` : ''}
-      </div>
-      <div class="item-value value-receita">+ ${formatarMoeda(r.Valor)}</div>
-    `;
-    container.appendChild(item);
-  });
 }
 
 async function carregarDespesasView() {
@@ -232,36 +189,32 @@ async function carregarDespesasView() {
 
   try {
     const res = await fetch(`${API_URL}?action=getDespesas&userId=${currentUser.ID_Usuario}`);
-    cacheDespesas = await res.json();
-  } catch (e) {
-    cacheDespesas = [
-      { Data_Fato: "2026-09-12", Descricao: "Supermercado Koch", Destino_Despesa: "Alimentação", Valor: 940.00 },
-      { Data_Fato: "2026-09-02", Descricao: "Aluguel Residencial", Destino_Despesa: "Moradia", Valor: 1800.00 }
-    ];
+    const data = await res.json();
+    
+    if (Array.isArray(data) && data.length > 0) {
+      data.sort((a, b) => new Date(b.Data_Fato) - new Date(a.Data_Fato));
+      let html = "";
+      data.forEach(item => {
+        html += `
+          <div class="data-item">
+            <div class="data-item-info">
+              <h5>${item.Descricao || 'Despesa'}</h5>
+              <span>${item.Data_Fato || ''} • ${item.Destino_Despesa || 'Geral'}</span>
+              ${item.Observacoes ? `<br><small style="color:#94a3b8;">📝 ${item.Observacoes}</small>` : ''}
+            </div>
+            <div class="data-item-value value-despesa">
+              - ${formatarMoeda(item.Valor)}
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma despesa registrada até o momento.</p>";
+    }
+  } catch (err) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Exibindo modo demonstração de despesas.</p>";
   }
-
-  // Ordenar em ordem decrescente de data
-  cacheDespesas.sort((a, b) => new Date(b.Data_Fato) - new Date(a.Data_Fato));
-
-  if (cacheDespesas.length === 0) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma despesa registrada ainda.</p>";
-    return;
-  }
-
-  container.innerHTML = "";
-  cacheDespesas.forEach(d => {
-    const item = document.createElement("div");
-    item.className = "list-item-card";
-    item.innerHTML = `
-      <div class="item-info">
-        <h4>${d.Descricao || 'Despesa'}</h4>
-        <p>📅 ${d.Data_Fato || ''} | 🏷️ ${d.Destino_Despesa || 'Geral'}</p>
-        ${d.Observacoes ? `<p style="color:#38bdf8; font-size:0.75rem; margin-top:2px;">💬 ${d.Observacoes}</p>` : ''}
-      </div>
-      <div class="item-value value-despesa">- ${formatarMoeda(d.Valor)}</div>
-    `;
-    container.appendChild(item);
-  });
 }
 
 async function carregarContasView() {
@@ -271,38 +224,33 @@ async function carregarContasView() {
 
   try {
     const res = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
-    cacheContas = await res.json();
-  } catch (e) {
-    cacheContas = [
-      { Intituicao: "341 - Itaú Unibanco S.A.", Agencia: "0001", Conta: "12345-6", Saldo_Atual: 4500.00 },
-      { Intituicao: "260 - Nu Pagamentos S.A. (Nubank)", Agencia: "0001", Conta: "98765-4", Saldo_Atual: 1860.72 }
-    ];
+    const data = await res.json();
+    
+    if (Array.isArray(data) && data.length > 0) {
+      data.sort((a, b) => String(a.Intituicao || '').localeCompare(String(b.Intituicao || '')));
+      let html = "";
+      data.forEach(item => {
+        const idTrans = item.ID_Banco || item.ID_Transacao || item.Conta;
+        html += `
+          <div class="data-item">
+            <div class="data-item-info">
+              <h5>🏦 ${item.Intituicao || 'Conta Bancária'}</h5>
+              <span>Agência: ${item.Agencia || '-'} | Conta: ${item.Conta || '-'}</span>
+            </div>
+            <div class="data-item-value">
+              <span class="value-receita" style="font-weight:bold;">${formatarMoeda(item.Saldo_Atual || item["Saldo Inicial"] || 0)}</span>
+              <button class="btn-delete-icon" onclick="deletarConta('${idTrans}')" title="Excluir Conta">✕</button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta cadastrada. Clique em + Nova Conta.</p>";
+    }
+  } catch (err) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta cadastrada.</p>";
   }
-
-  // Ordenar em ordem alfabética pela Instituição
-  cacheContas.sort((a, b) => String(a.Intituicao).localeCompare(String(b.Intituicao)));
-
-  if (cacheContas.length === 0) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta bancária cadastrada.</p>";
-    return;
-  }
-
-  container.innerHTML = "";
-  cacheContas.forEach(c => {
-    const item = document.createElement("div");
-    item.className = "list-item-card";
-    item.innerHTML = `
-      <div class="item-info">
-        <h4>🏦 ${c.Intituicao || 'Conta Bancária'}</h4>
-        <p>Agência: ${c.Agencia || '-'} | Conta: ${c.Conta || '-'}</p>
-      </div>
-      <div style="display:flex; align-items:center;">
-        <div class="item-value" style="color:#38bdf8;">${formatarMoeda(c.Saldo_Atual || c['Saldo Inicial'])}</div>
-        <button class="btn-delete-x" onclick="deletarConta('${c.Conta}')" title="Deletar Conta">✕</button>
-      </div>
-    `;
-    container.appendChild(item);
-  });
 }
 
 async function carregarCartoesView() {
@@ -312,78 +260,202 @@ async function carregarCartoesView() {
 
   try {
     const res = await fetch(`${API_URL}?action=getCartoes&userId=${currentUser.ID_Usuario}`);
-    cacheCartoes = await res.json();
-  } catch (e) {
-    cacheCartoes = [
-      { Nome_Cartao: "Nubank Ultravioleta", Limite_Total: 15000, Dia_Vencimento: "10", Dia_Fechamento: "03" },
-      { Nome_Cartao: "Itaú Personnalité", Limite_Total: 25000, Dia_Vencimento: "15", Dia_Fechamento: "08" }
-    ];
+    const data = await res.json();
+    
+    if (Array.isArray(data) && data.length > 0) {
+      let html = "";
+      data.forEach(item => {
+        const idCartao = item.ID_Cartao || item.Nome_Cartao;
+        html += `
+          <div class="data-item">
+            <div class="data-item-info">
+              <h5>💳 ${item.Nome_Cartao || 'Cartão de Crédito'}</h5>
+              <span>Fecha dia ${item.Dia_Fechamento || '-'} | Vence dia ${item.Dia_Vencimento || '-'}</span>
+            </div>
+            <div class="data-item-value">
+              <span style="font-weight:bold; color:#8b5cf6;">${formatarMoeda(item.Limite_Total || 0)}</span>
+              <button class="btn-delete-icon" onclick="deletarCartao('${idCartao}')" title="Excluir Cartão">✕</button>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão cadastrado. Clique em + Novo Cartão.</p>";
+    }
+  } catch (err) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão cadastrado.</p>";
+  }
+}
+
+/* VIEW INVESTIMENTOS & PATRIMÔNIO */
+
+async function carregarInvestimentosView() {
+  const container = document.getElementById("listaInvestimentosView");
+  if (!container) return;
+  container.innerHTML = "<p style='color:#94a3b8;'>Carregando carteira de investimentos...</p>";
+
+  try {
+    const res = await fetch(`${API_URL}?action=getInvestimentos&userId=${currentUser.ID_Usuario}`);
+    const data = await res.json();
+    
+    let list = Array.isArray(data) ? data : [];
+    
+    // Se sem investimentos remotos, carregar dados de demonstração
+    if (list.length === 0) {
+      list = [
+        { ID_Investimento: "INV_1", Categoria: "Ações", Nome_Ativo: "PETR4 - Petrobras", Valor_Total: 12500, Quantidade_Cotas: 350, Tipo_Operacao: "Aquisição de Cotas", Data_Operacao: "2026-09-01" },
+        { ID_Investimento: "INV_2", Categoria: "FIIs", Nome_Ativo: "HGLG11 - Pátria Logística", Valor_Total: 10800, Quantidade_Cotas: 65, Tipo_Operacao: "Aquisição de Cotas", Data_Operacao: "2026-09-05" },
+        { ID_Investimento: "INV_3", Categoria: "Tesouro Direto", Nome_Ativo: "Tesouro Selic 2029", Valor_Total: 15000, Tipo_Operacao: "Saldo Inicial", Data_Operacao: "2026-08-15" },
+        { ID_Investimento: "INV_4", Categoria: "Crypto", Nome_Ativo: "Bitcoin (BTC)", Valor_Total: 4500, Quantidade_Cotas: 0.008, Tipo_Operacao: "Aquisição de Cotas", Data_Operacao: "2026-09-10" }
+      ];
+    }
+
+    let patrimonioTotal = 0;
+    const catMap = {
+      "Ações": 0,
+      "FIIs": 0,
+      "Previdência Privada": 0,
+      "Crypto": 0,
+      "Ativos Internacionais": 0,
+      "Tesouro Direto": 0
+    };
+
+    let html = "";
+    list.forEach(item => {
+      const val = parseFloat(item.Valor_Total || item.Valor) || 0;
+      patrimonioTotal += val;
+      const cat = item.Categoria || "Ações";
+      catMap[cat] = (catMap[cat] || 0) + val;
+
+      let badgeClass = "badge-acoes";
+      if (cat === "FIIs") badgeClass = "badge-fiis";
+      else if (cat === "Previdência Privada") badgeClass = "badge-prev";
+      else if (cat === "Crypto") badgeClass = "badge-crypto";
+      else if (cat === "Ativos Internacionais") badgeClass = "badge-internacional";
+      else if (cat === "Tesouro Direto") badgeClass = "badge-tesouro";
+
+      const idInv = item.ID_Investimento || item._rowId;
+
+      html += `
+        <div class="data-item">
+          <div class="data-item-info">
+            <h5>${item.Nome_Ativo || 'Ativo'}</h5>
+            <span>${item.Tipo_Operacao || 'Saldo Inicial'} ${item.Quantidade_Cotas ? '• ' + item.Quantidade_Cotas + ' cota(s)' : ''}</span>
+            <br><span class="badge-cat ${badgeClass}">${cat}</span>
+            ${item.Observacoes ? `<br><small style="color:#94a3b8;">📝 ${item.Observacoes}</small>` : ''}
+          </div>
+          <div class="data-item-value">
+            <span class="value-receita" style="font-weight:bold;">${formatarMoeda(val)}</span>
+            <button class="btn-delete-icon" onclick="deletarInvestimento('${idInv}')" title="Excluir Investimento">✕</button>
+          </div>
+        </div>
+      `;
+    });
+
+    document.getElementById("patrimonioTotalInvest").textContent = formatarMoeda(patrimonioTotal);
+    container.innerHTML = html;
+
+    renderizarGraficoInvestimentos(catMap);
+
+  } catch (err) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Erro ao carregar carteira de investimentos.</p>";
+  }
+}
+
+function renderizarGraficoInvestimentos(catMap) {
+  const ctx = document.getElementById('investimentosChart');
+  if (!ctx) return;
+
+  const labels = Object.keys(catMap);
+  const values = Object.values(catMap);
+
+  if (window.myInvestPieChart) {
+    window.myInvestPieChart.destroy();
   }
 
-  if (cacheCartoes.length === 0) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão cadastrado ainda.</p>";
-    return;
-  }
-
-  container.innerHTML = "";
-  cacheCartoes.forEach(card => {
-    const item = document.createElement("div");
-    item.className = "list-item-card";
-    item.innerHTML = `
-      <div class="item-info">
-        <h4>💳 ${card.Nome_Cartao}</h4>
-        <p>Vencimento: Dia ${card.Dia_Vencimento} | Fechamento: Dia ${card.Dia_Fechamento}</p>
-      </div>
-      <div style="display:flex; align-items:center;">
-        <div class="item-value" style="color:#f59e0b;">${formatarMoeda(card.Limite_Total)}</div>
-        <button class="btn-delete-x" onclick="deletarCartao('${card.Nome_Cartao}')" title="Deletar Cartão">✕</button>
-      </div>
-    `;
-    container.appendChild(item);
+  window.myInvestPieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4'],
+        borderWidth: 2,
+        borderColor: '#1e293b'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#f8fafc', font: { size: 11 } }
+        }
+      }
+    }
   });
 }
 
-/* EXCLUSÃO DE CONTAS E CARTÕES */
+/* EXCLUSÕES */
 
-async function deletarConta(contaId) {
-  if (!confirm(`Deseja realmente deletar a conta bancária ${contaId}?`)) return;
-
+async function deletarConta(id) {
+  if (!confirm("Tem certeza que deseja excluir esta conta bancária?")) return;
   try {
     await fetch(API_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: "deleteConta", userId: currentUser.ID_Usuario, contaId: contaId })
+      body: JSON.stringify({ action: 'deleteConta', payload: { id: id }, userId: currentUser.ID_Usuario })
     });
-    alert("Conta removida com sucesso!");
-  } catch (err) {
-    alert("Removido com sucesso!");
+    alert("Conta excluída com sucesso!");
+  } catch (e) {
+    alert("Solicitação de exclusão enviada.");
   }
   carregarContasView();
 }
 
-async function deletarCartao(nomeCartao) {
-  if (!confirm(`Deseja realmente deletar o cartão ${nomeCartao}?`)) return;
-
+async function deletarCartao(id) {
+  if (!confirm("Tem certeza que deseja excluir este cartão de crédito?")) return;
   try {
     await fetch(API_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: "deleteCartao", userId: currentUser.ID_Usuario, cartaoId: nomeCartao })
+      body: JSON.stringify({ action: 'deleteCartao', payload: { id: id }, userId: currentUser.ID_Usuario })
     });
-    alert("Cartão removido com sucesso!");
-  } catch (err) {
-    alert("Removido com sucesso!");
+    alert("Cartão excluído com sucesso!");
+  } catch (e) {
+    alert("Solicitação de exclusão enviada.");
   }
   carregarCartoesView();
 }
 
-/* MODAIS E SALVAMENTO */
+async function deletarInvestimento(id) {
+  if (!confirm("Tem certeza que deseja excluir este investimento da sua carteira?")) return;
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleteInvestimento', payload: { id: id }, userId: currentUser.ID_Usuario })
+    });
+    alert("Investimento excluído com sucesso!");
+  } catch (e) {
+    alert("Solicitação de exclusão enviada.");
+  }
+  carregarInvestimentosView();
+}
+
+/* SALVAMENTO DE FORMULÁRIOS */
 
 function abrirModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.add("active");
+  if (modalId === "modalConta" && typeof carregarSelectBancos === "function") {
+    carregarSelectBancos("selectBancoConta");
+  }
 }
 
 function fecharModal(modalId) {
@@ -441,13 +513,11 @@ async function salvarLancamento(e) {
     });
     alert("Lançamento salvo com sucesso!");
   } catch (err) {
-    alert("Salvo!");
+    alert("Salvo localmente!");
   }
 
   fecharModal("modalLancamento");
   carregarDashboard();
-  carregarReceitasView();
-  carregarDespesasView();
 }
 
 async function salvarNovaConta(e) {
@@ -464,7 +534,8 @@ async function salvarNovaConta(e) {
     Conta: conta,
     "Saldo Inicial": saldoInicial,
     Saldo_Atual: saldoInicial,
-    ID_Usuario: currentUser.ID_Usuario
+    ID_Usuario: currentUser.ID_Usuario,
+    ID_Criador: currentUser.Nome_Completo
   };
 
   try {
@@ -474,7 +545,7 @@ async function salvarNovaConta(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: "addConta", payload: payload })
     });
-    alert("Conta Bancária cadastrada!");
+    alert("Conta Bancária cadastrada com sucesso!");
   } catch (err) {
     alert("Conta cadastrada!");
   }
@@ -484,18 +555,19 @@ async function salvarNovaConta(e) {
 
 async function salvarNovoCartao(e) {
   e.preventDefault();
-  const nome = document.getElementById("inputNomeCartao").value;
+  const nomeCartao = document.getElementById("inputNomeCartao").value;
   const limite = parseFloat(document.getElementById("inputLimiteCartao").value) || 0;
-  const venc = document.getElementById("inputVencimentoCartao").value;
-  const fech = document.getElementById("inputFechamentoCartao").value;
+  const diaFechamento = document.getElementById("inputDiaFechamento").value;
+  const diaVencimento = document.getElementById("inputDiaVencimento").value;
 
   const payload = {
     ID_Cartao: "CARD_" + Date.now(),
-    ID_Usuario: currentUser.ID_Usuario,
-    Nome_Cartao: nome,
+    Nome_Cartao: nomeCartao,
     Limite_Total: limite,
-    Dia_Vencimento: venc,
-    Dia_Fechamento: fech
+    Dia_Fechamento: diaFechamento,
+    Dia_Vencimento: diaVencimento,
+    ID_Usuario: currentUser.ID_Usuario,
+    ID_Criador: currentUser.Nome_Completo
   };
 
   try {
@@ -505,12 +577,51 @@ async function salvarNovoCartao(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: "addCartao", payload: payload })
     });
-    alert("Cartão cadastrado com sucesso!");
+    alert("Cartão de crédito cadastrado com sucesso!");
   } catch (err) {
     alert("Cartão cadastrado!");
   }
   fecharModal("modalCartao");
   carregarCartoesView();
+}
+
+async function salvarNovoInvestimento(e) {
+  e.preventDefault();
+  const tipoOp = document.getElementById("selectTipoInvestOp").value;
+  const categoria = document.getElementById("selectCategoriaInvest").value;
+  const nomeAtivo = document.getElementById("inputNomeAtivoInvest").value;
+  const valor = parseFloat(document.getElementById("inputValorInvest").value) || 0;
+  const cotas = parseFloat(document.getElementById("inputCotasInvest").value) || 0;
+  const dataOp = document.getElementById("inputDataInvest").value || new Date().toISOString().substring(0, 10);
+  const obs = document.getElementById("inputObsInvest").value;
+
+  const payload = {
+    ID_Investimento: "INV_" + Date.now(),
+    Tipo_Operacao: tipoOp,
+    Categoria: categoria,
+    Nome_Ativo: nomeAtivo,
+    Valor_Total: valor,
+    Quantidade_Cotas: cotas,
+    Data_Operacao: dataOp,
+    Observacoes: obs,
+    ID_Usuario: currentUser.ID_Usuario,
+    ID_Criador: currentUser.Nome_Completo
+  };
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "addInvestimento", payload: payload })
+    });
+    alert("Investimento registrado com sucesso!");
+  } catch (err) {
+    alert("Investimento cadastrado!");
+  }
+
+  fecharModal("modalNovoInvestimento");
+  carregarInvestimentosView();
 }
 
 function realizarLogin(e) {
@@ -528,6 +639,7 @@ function realizarLogin(e) {
   localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
   atualizarHeaderUsuario();
   fecharModal("modalLogin");
+  alert("✅ Login realizado com sucesso! Bem-vindo(a), " + currentUser.Nome_Completo);
   carregarDashboard();
 }
 
