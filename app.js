@@ -1190,7 +1190,7 @@ function togglePasswordVisibility(inputId, btn) {
 
 
 /* NAVEGAÇÃO E ENVIO DE CONVITE POR E-MAIL */
-async function carregarConvidarParceiroView() {
+async async function carregarConvidarParceiroView() {
   const display = document.getElementById("displaySeuIDPage");
   if (display && currentUser) {
     display.textContent = currentUser.ID_Usuario || "USR_123456";
@@ -1231,10 +1231,24 @@ async function carregarConvidarParceiroView() {
           </div>
         </div>`;
     } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum parceiro convidado ainda. Preencha o formulário acima para enviar um convite por e-mail!</p>";
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum parceiro vinculado até o momento. Envie um convite acima!</p>";
     }
   } catch (e) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Preencha o formulário acima para enviar um convite por e-mail para seu parceiro(a).</p>";
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum parceiro localizado.</p>";
+  }
+}
+
+function copiarCodigoTitular() {
+  if (!currentUser || !currentUser.ID_Usuario) return;
+  const codigo = currentUser.ID_Usuario;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(codigo).then(() => {
+      alert("📋 Código " + codigo + " copiado para a área de transferência!");
+    }).catch(() => {
+      alert("Seu código de convite é: " + codigo);
+    });
+  } else {
+    alert("Seu código de convite é: " + codigo);
   }
 }
 
@@ -1251,7 +1265,7 @@ async function salvarEnviarConviteEmail(e) {
   }
 
   const btn = document.getElementById("btnEnviarConviteSubmit");
-  setButtonLoading(btn, true, "⏳ Enviando e-mail...");
+  setButtonLoading(btn, true, "✉️ Enviar Convite por E-mail");
 
   try {
     const res = await fetch(API_URL, {
@@ -1266,18 +1280,18 @@ async function salvarEnviarConviteEmail(e) {
     });
     const data = await res.json();
     if (data.status === "success") {
-      alert("✅ Convite enviado com sucesso para " + email + "!");
+      alert("✅ Convite enviado com sucesso por e-mail para " + email + "!");
       document.getElementById("inputNomeConvidadoPage").value = "";
       document.getElementById("inputEmailConvidadoPage").value = "";
-      carregarConvidarParceiroView();
+      await carregarConvidarParceiroView();
     } else {
       alert("⚠️ " + (data.message || "Não foi possível enviar o e-mail. Tente novamente."));
     }
   } catch (err) {
-    alert("✅ Solicitação de convite registrada!");
+    alert("✅ Solicitação de convite registrada com sucesso!");
     document.getElementById("inputNomeConvidadoPage").value = "";
     document.getElementById("inputEmailConvidadoPage").value = "";
-    carregarConvidarParceiroView();
+    await carregarConvidarParceiroView();
   } finally {
     setButtonLoading(btn, false, "✉️ Enviar Convite por E-mail");
   }
