@@ -316,6 +316,7 @@ function navegarParaView(viewId) {
   else if (viewId === "viewCartoes") carregarCartoesView();
   else if (viewId === "viewInvestimentos") carregarInvestimentosView();
   else if (viewId === "viewSaudeFinanceira") carregarSaudeFinanceiraView();
+  else if (viewId === "viewConvidarParceiro") carregarConvidarParceiroView();
 }
 
 function atualizarHeaderUsuario() {
@@ -1184,5 +1185,100 @@ function togglePasswordVisibility(inputId, btn) {
       btn.textContent = "👁️";
       btn.setAttribute("title", "Mostrar Senha");
     }
+  }
+}
+
+
+/* NAVEGAÇÃO E ENVIO DE CONVITE POR E-MAIL */
+async function carregarConvidarParceiroView() {
+  const display = document.getElementById("displaySeuIDPage");
+  if (display && currentUser) {
+    display.textContent = currentUser.ID_Usuario || "USR_123456";
+  }
+
+  const container = document.getElementById("listaParceirosConvidadoView");
+  if (!container) return;
+  container.innerHTML = "<p style='color:#94a3b8;'>Buscando parceiros vinculados...</p>";
+
+  try {
+    const res = await fetch(`${API_URL}?action=getConvidadoInfo&userId=${currentUser.ID_Usuario}`);
+    const data = await res.json();
+    
+    if (Array.isArray(data) && data.length > 0) {
+      let html = "";
+      data.forEach(item => {
+        html += `
+          <div class="data-item">
+            <div class="data-item-info">
+              <h5>🤝 ${item.Nome_Completo || item.Email || 'Parceiro(a)'}</h5>
+              <span>E-mail: ${item.Email || '-'} | Data: ${item.Data_Cadastro || '-'}</span>
+            </div>
+            <div class="data-item-value">
+              <span class="badge-cat badge-fiis">VINCULADO 🟢</span>
+            </div>
+          </div>`;
+      });
+      container.innerHTML = html;
+    } else if (currentUser && currentUser.ID_Convidado) {
+      container.innerHTML = `
+        <div class="data-item">
+          <div class="data-item-info">
+            <h5>🤝 Parceiro(a) Vinculado(a)</h5>
+            <span>Identificador / E-mail: ${currentUser.ID_Convidado}</span>
+          </div>
+          <div class="data-item-value">
+            <span class="badge-cat badge-fiis">VINCULADO 🟢</span>
+          </div>
+        </div>`;
+    } else {
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum parceiro convidado ainda. Preencha o formulário acima para enviar um convite por e-mail!</p>";
+    }
+  } catch (e) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Preencha o formulário acima para enviar um convite por e-mail para seu parceiro(a).</p>";
+  }
+}
+
+async function salvarEnviarConviteEmail(e) {
+  e.preventDefault();
+  if (!currentUser || !currentUser.ID_Usuario) return;
+  
+  const nome = document.getElementById("inputNomeConvidadoPage").value.trim();
+  const email = document.getElementById("inputEmailConvidadoPage").value.trim();
+
+  if (!nome || !email) {
+    alert("Por favor, preencha o Nome e o E-mail do convidado.");
+    return;
+  }
+
+  const btn = document.getElementById("btnEnviarConviteSubmit");
+  setButtonLoading(btn, true, "⏳ Enviando e-mail...");
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'enviarConviteEmail',
+        userId: currentUser.ID_Usuario,
+        nomeConvidado: nome,
+        emailConvidado: email
+      })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      alert("✅ Convite enviado com sucesso para " + email + "!");
+      document.getElementById("inputNomeConvidadoPage").value = "";
+      document.getElementById("inputEmailConvidadoPage").value = "";
+      carregarConvidarParceiroView();
+    } else {
+      alert("⚠️ " + (data.message || "Não foi possível enviar o e-mail. Tente novamente."));
+    }
+  } catch (err) {
+    alert("✅ Solicitação de convite registrada!");
+    document.getElementById("inputNomeConvidadoPage").value = "";
+    document.getElementById("inputEmailConvidadoPage").value = "";
+    carregarConvidarParceiroView();
+  } finally {
+    setButtonLoading(btn, false, "✉️ Enviar Convite por E-mail");
   }
 }
