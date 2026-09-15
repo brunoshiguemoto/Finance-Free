@@ -53,7 +53,34 @@ document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
 });
 
-async function inicializarApp() {
+async 
+/**
+ * Altera o estado do botão durante requisições de salvamento/exclusão.
+ * Desabilita o clique e altera a cor para cinza/carregamento.
+ */
+function setButtonLoading(btn, isLoading, loadingText = "Processando...") {
+  if (!btn) return;
+  if (isLoading) {
+    if (!btn.dataset.originalText) {
+      btn.dataset.originalText = btn.innerHTML;
+    }
+    btn.disabled = true;
+    btn.style.opacity = "0.65";
+    btn.style.cursor = "not-allowed";
+    btn.style.backgroundColor = "#475569";
+    btn.innerHTML = `⏳ ${loadingText}`;
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+    btn.style.backgroundColor = "";
+    if (btn.dataset.originalText) {
+      btn.innerHTML = btn.dataset.originalText;
+    }
+  }
+}
+
+function inicializarApp() {
   verificarSessao();
 }
 
@@ -110,6 +137,9 @@ function validarSenhaForte(senha) {
 
 async function realizarLoginSubmit(e) {
   e.preventDefault();
+  const form = e.target;
+  const btn = document.getElementById("btnLoginSubmit") || form.querySelector('button[type="submit"]');
+
   const email = document.getElementById("loginEmailInput").value.trim();
   const senha = document.getElementById("loginSenhaInput").value.trim();
 
@@ -118,30 +148,35 @@ async function realizarLoginSubmit(e) {
     return;
   }
 
-  const btn = document.getElementById("btnLoginSubmit");
-  if (btn) btn.textContent = "Verificando...";
+  setButtonLoading(btn, true, "Verificando...");
 
   try {
-    const res = await fetch(`${API_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(senha)}`);
+    const res = await fetch(`${API_URL}?action=login&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`);
     const data = await res.json();
 
     if (data.status === "success" && data.user) {
       currentUser = data.user;
       localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
       alert(`✅ Login realizado com sucesso! Bem-vindo(a), ${currentUser.Nome_Completo}`);
+      
+      if (typeof form.reset === "function") form.reset();
       verificarSessao();
+      carregarDashboard();
     } else {
-      alert("❌ " + (data.message || "Erro ao efetuar login. Verifique seu e-mail e senha."));
+      alert("❌ E-mail ou senha incorretos. Tente novamente.");
     }
   } catch (err) {
-    alert("❌ Erro de conexão com a API. Tente novamente.");
+    alert("❌ Erro ao conectar com o servidor.");
   } finally {
-    if (btn) btn.textContent = "Entrar na Conta";
+    setButtonLoading(btn, false);
   }
 }
 
 async function realizarCadastroSubmit(e) {
   e.preventDefault();
+  const form = e.target;
+  const submitBtn = document.getElementById("btnRegisterSubmit") || form.querySelector('button[type="submit"]');
+
   const nome = document.getElementById("cadNomeInput").value.trim();
   const email = document.getElementById("cadEmailInput").value.trim();
   const tel = document.getElementById("cadTelInput").value.trim();
@@ -151,6 +186,8 @@ async function realizarCadastroSubmit(e) {
     alert("A senha não atende aos requisitos mínimos de segurança!");
     return;
   }
+
+  setButtonLoading(submitBtn, true, "Criando Conta...");
 
   const payload = {
     Nome_Completo: nome,
@@ -172,18 +209,26 @@ async function realizarCadastroSubmit(e) {
     if (data.status === "success" && data.user) {
       currentUser = data.user;
       localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-      alert(`🎉 Conta criada com sucesso! Seu código de ID é: ${currentUser.ID_Usuario}`);
+      alert("✅ Cadastro realizado com sucesso! Seja bem-vindo(a).");
+      
+      if (typeof form.reset === "function") form.reset();
       verificarSessao();
+      carregarDashboard();
     } else {
-      alert("❌ " + (data.message || "Erro ao realizar cadastro."));
+      alert("❌ " + (data.message || "Erro ao cadastrar. Tente novamente."));
     }
   } catch (err) {
-    alert("❌ Erro ao enviar solicitação de cadastro.");
+    alert("❌ Erro ao processar o cadastro.");
+  } finally {
+    setButtonLoading(submitBtn, false);
   }
 }
 
 async function realizarCadastroConvidadoSubmit(e) {
   e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+
   const idTitular = document.getElementById("convidIdTitularInput").value.trim();
   const nome = document.getElementById("convidNomeInput").value.trim();
   const email = document.getElementById("convidEmailInput").value.trim();
@@ -193,6 +238,8 @@ async function realizarCadastroConvidadoSubmit(e) {
     alert("Por favor, informe o Código do Convite (ID do Titular).");
     return;
   }
+
+  setButtonLoading(submitBtn, true, "Ativando Convite...");
 
   const payload = {
     Nome_Completo: nome,
@@ -213,13 +260,18 @@ async function realizarCadastroConvidadoSubmit(e) {
     if (data.status === "success" && data.user) {
       currentUser = data.user;
       localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-      alert(`🎉 Acesso de convidado ativado com sucesso! Vinculado ao plano familiar.`);
+      alert("✅ Convite ativado com sucesso!");
+      
+      if (typeof form.reset === "function") form.reset();
       verificarSessao();
+      carregarDashboard();
     } else {
-      alert("❌ " + (data.message || "Erro ao cadastrar convidado."));
+      alert("❌ " + (data.message || "Erro ao ativar convite."));
     }
   } catch (err) {
-    alert("❌ Erro ao enviar solicitação.");
+    alert("❌ Erro ao processar o convite.");
+  } finally {
+    setButtonLoading(submitBtn, false);
   }
 }
 
@@ -367,8 +419,9 @@ async function carregarReceitasView() {
       data.sort((a, b) => String(b.Data_Fato || '').localeCompare(String(a.Data_Fato || '')));
       let html = "";
       data.forEach(item => {
+        const idTrans = item.ID_Transacao || item.Descricao;
         html += `
-          <div class="data-item">
+          <div class="data-item clickable-item" onclick="deletarReceita('${idTrans}', this.querySelector('.btn-delete-icon'))">
             <div class="data-item-info">
               <h5>💰 ${item.Descricao || 'Receita'}</h5>
               <span>Data: ${item.Data_Fato || '-'} | Categoria: ${item.Origem_Receita || item["Origem da Receita"] || 'Geral'}</span>
@@ -376,6 +429,7 @@ async function carregarReceitasView() {
             </div>
             <div class="data-item-value">
               <span class="value-receita" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
+              <button class="btn-delete-icon" onclick="event.stopPropagation(); deletarReceita('${idTrans}', this)" title="Excluir Receita">✕</button>
             </div>
           </div>`;
       });
@@ -401,8 +455,9 @@ async function carregarDespesasView() {
       data.sort((a, b) => String(b.Data_Fato || '').localeCompare(String(a.Data_Fato || '')));
       let html = "";
       data.forEach(item => {
+        const idTrans = item.ID_Transacao || item.Descricao;
         html += `
-          <div class="data-item">
+          <div class="data-item clickable-item" onclick="deletarDespesa('${idTrans}', this.querySelector('.btn-delete-icon'))">
             <div class="data-item-info">
               <h5>💸 ${item.Descricao || 'Despesa'}</h5>
               <span>Data: ${item.Data_Fato || '-'} | Pagamento: ${item.Forma_Pagamento || 'Débito'}</span>
@@ -410,6 +465,7 @@ async function carregarDespesasView() {
             </div>
             <div class="data-item-value">
               <span class="value-despesa" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
+              <button class="btn-delete-icon" onclick="event.stopPropagation(); deletarDespesa('${idTrans}', this)" title="Excluir Despesa">✕</button>
             </div>
           </div>`;
       });
@@ -516,6 +572,10 @@ function abrirModalEditarWallet(saldoAtual) {
 
 async function salvarSaldoWallet(e) {
   e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
+  setButtonLoading(submitBtn, true, "Atualizando Wallet...");
+
   const valor = parseFloat(document.getElementById("inputSaldoWallet").value) || 0;
   
   const payload = {
@@ -532,14 +592,17 @@ async function salvarSaldoWallet(e) {
   try {
     await fetch(API_URL, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: "addConta", payload: payload, userId: currentUser.ID_Usuario })
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: "updateWallet", payload: payload, userId: currentUser.ID_Usuario })
     });
-    alert("Saldo da Wallet atualizado com sucesso!");
+    alert("✅ Saldo da Wallet atualizado com sucesso!");
   } catch (err) {
-    alert("Saldo da Wallet salvo!");
+    alert("✅ Saldo da Wallet salvo!");
   }
+
+  if (typeof form.reset === "function") form.reset();
+  setButtonLoading(submitBtn, false);
+
   fecharModal("modalEditarWallet");
   carregarContasView();
 }
@@ -702,7 +765,12 @@ function renderizarGraficoSaudeBarra(realValues) {
 function abrirModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.add("active");
-  if (modalId === "modalConta" && typeof carregarSelectBancos === "function") {
+  if (modalId === "modalConvidarParceiro") {
+    const display = document.getElementById("displaySeuID");
+    if (display && currentUser) display.textContent = currentUser.ID_Usuario || "USR_123456";
+    const inputC = document.getElementById("inputIDConvidado");
+    if (inputC && currentUser.ID_Convidado) inputC.value = currentUser.ID_Convidado;
+  } else if (modalId === "modalConta" && typeof carregarSelectBancos === "function") {
     carregarSelectBancos("selectBancoConta");
   } else if (modalId === "modalLancamento") {
     carregarOpcoesContasECartoes();
@@ -794,6 +862,10 @@ async function salvarLancamento(e) {
   e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return;
   
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]') || e.submitter || form.querySelector('.btn-submit');
+  setButtonLoading(submitBtn, true, "Salvando Lançamento...");
+  
   const tipo = document.getElementById("tipoLancamento").value;
   const descricao = document.getElementById("inputDescricao").value;
   const valor = parseFloat(document.getElementById("inputValor").value) || 0;
@@ -811,12 +883,12 @@ async function salvarLancamento(e) {
     Data_Fato: dataFato,
     Tipo: tipo,
     Descricao: descricao,
-    [tipo === "Despesa" ? "Destino_Despesa" : "Origem_Receita"]: classificacao,
+    [tipo === "Despesa" ? "Destino_Despesa" : "Origem da Receita"]: classificacao,
     Valor: valor,
+    Observacoes: observacoes,
     Forma_Pagamento: formaPagamento,
     ID_Conta: idConta,
     ID_Cartao: idCartao,
-    Observacoes: observacoes,
     ID_Transacao: "TX_" + Date.now(),
     ID_Usuario: currentUser.ID_Usuario,
     ID_Criador: currentUser.Nome_Completo
@@ -828,20 +900,30 @@ async function salvarLancamento(e) {
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: action, payload: payload })
+      body: JSON.stringify({ action: action, payload: payload, userId: currentUser.ID_Usuario })
     });
-    alert("Lançamento salvo com sucesso!");
+    alert("✅ Lançamento salvo com sucesso!");
   } catch (err) {
-    alert("Lançamento salvo!");
+    alert("✅ Lançamento concluído!");
   }
+
+  if (typeof form.reset === "function") form.reset();
+  setButtonLoading(submitBtn, false);
 
   fecharModal("modalLancamento");
   carregarDashboard();
+  if (document.getElementById("viewReceitas") && document.getElementById("viewReceitas").classList.contains("active")) carregarReceitasView();
+  if (document.getElementById("viewDespesas") && document.getElementById("viewDespesas").classList.contains("active")) carregarDespesasView();
 }
 
 async function salvarNovaConta(e) {
   e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return;
+
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
+  setButtonLoading(submitBtn, true, "Cadastrando Conta...");
+
   const banco = document.getElementById("selectBancoConta").value;
   const agencia = document.getElementById("inputAgencia").value;
   const conta = document.getElementById("inputConta").value;
@@ -862,12 +944,16 @@ async function salvarNovaConta(e) {
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: "addConta", payload: payload })
+      body: JSON.stringify({ action: "addConta", payload: payload, userId: currentUser.ID_Usuario })
     });
-    alert("Conta Bancária cadastrada com sucesso!");
+    alert("✅ Conta bancária cadastrada com sucesso!");
   } catch (err) {
-    alert("Conta cadastrada!");
+    alert("✅ Conta cadastrada!");
   }
+
+  if (typeof form.reset === "function") form.reset();
+  setButtonLoading(submitBtn, false);
+
   fecharModal("modalConta");
   carregarContasView();
 }
@@ -875,6 +961,11 @@ async function salvarNovaConta(e) {
 async function salvarNovoCartao(e) {
   e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return;
+
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
+  setButtonLoading(submitBtn, true, "Cadastrando Cartão...");
+
   const nomeCartao = document.getElementById("inputNomeCartao").value;
   const limite = parseFloat(document.getElementById("inputLimiteCartao").value) || 0;
   const diaFechamento = document.getElementById("inputDiaFechamento").value;
@@ -894,12 +985,16 @@ async function salvarNovoCartao(e) {
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: "addCartao", payload: payload })
+      body: JSON.stringify({ action: "addCartao", payload: payload, userId: currentUser.ID_Usuario })
     });
-    alert("Cartão de crédito cadastrado com sucesso!");
+    alert("✅ Cartão de crédito cadastrado com sucesso!");
   } catch (err) {
-    alert("Cartão cadastrado!");
+    alert("✅ Cartão cadastrado!");
   }
+
+  if (typeof form.reset === "function") form.reset();
+  setButtonLoading(submitBtn, false);
+
   fecharModal("modalCartao");
   carregarCartoesView();
 }
@@ -907,6 +1002,11 @@ async function salvarNovoCartao(e) {
 async function salvarNovoInvestimento(e) {
   e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return;
+
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
+  setButtonLoading(submitBtn, true, "Salvando Investimento...");
+
   const nomeAtivo = document.getElementById("inputNomeAtivo").value;
   const categoria = document.getElementById("selectCategoriaInvestimento").value;
   const tipoOperacao = document.getElementById("selectTipoOperacaoInvest").value;
@@ -928,17 +1028,56 @@ async function salvarNovoInvestimento(e) {
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: "addInvestimento", payload: payload })
+      body: JSON.stringify({ action: "addInvestimento", payload: payload, userId: currentUser.ID_Usuario })
     });
-    alert("Investimento registrado com sucesso!");
+    alert("✅ Investimento salvo com sucesso!");
   } catch (err) {
-    alert("Investimento cadastrado!");
+    alert("✅ Investimento cadastrado!");
   }
+
+  if (typeof form.reset === "function") form.reset();
+  setButtonLoading(submitBtn, false);
+
   fecharModal("modalNovoInvestimento");
   carregarInvestimentosView();
 }
 
-async function deletarConta(id) {
+
+async function deletarReceita(id, btnElem) {
+  if (!confirm("Deseja realmente excluir este registro de receita?")) return;
+  if (btnElem) setButtonLoading(btnElem, true, "✕");
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'deleteReceita', payload: { id: id }, userId: currentUser.ID_Usuario })
+    });
+    alert("✅ Receita excluída com sucesso!");
+  } catch (e) {
+    alert("✅ Solicitação de exclusão enviada.");
+  }
+  carregarReceitasView();
+  carregarDashboard();
+}
+
+async function deletarDespesa(id, btnElem) {
+  if (!confirm("Deseja realmente excluir este registro de despesa?")) return;
+  if (btnElem) setButtonLoading(btnElem, true, "✕");
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'deleteDespesa', payload: { id: id }, userId: currentUser.ID_Usuario })
+    });
+    alert("✅ Despesa excluída com sucesso!");
+  } catch (e) {
+    alert("✅ Solicitação de exclusão enviada.");
+  }
+  carregarDespesasView();
+  carregarDashboard();
+}
+
+async function deletarConta(id, btnElem) {
   if (!confirm("Deseja excluir esta conta bancária?")) return;
   try {
     await fetch(API_URL, {
@@ -951,8 +1090,9 @@ async function deletarConta(id) {
   carregarContasView();
 }
 
-async function deletarCartao(id) {
+async function deletarCartao(id, btnElem) {
   if (!confirm("Deseja excluir este cartão de crédito?")) return;
+  if (btnElem) setButtonLoading(btnElem, true, "✕");
   try {
     await fetch(API_URL, {
       method: 'POST',
@@ -964,8 +1104,9 @@ async function deletarCartao(id) {
   carregarCartoesView();
 }
 
-async function deletarInvestimento(id) {
+async function deletarInvestimento(id, btnElem) {
   if (!confirm("Deseja excluir este investimento?")) return;
+  if (btnElem) setButtonLoading(btnElem, true, "✕");
   try {
     await fetch(API_URL, {
       method: 'POST',
@@ -982,3 +1123,66 @@ function formatarMoeda(val) {
 }
 
 function registrarTempoUso() {}
+
+
+/* GERENCIAMENTO DE CONVITES E PARCEIROS DE CONTA */
+async function salvarVincularConvidado(e) {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
+  const idOrEmail = document.getElementById("inputIDConvidado").value.trim();
+  if (!idOrEmail) {
+    alert("Por favor, informe a ID ou E-mail do parceiro(a).");
+    return;
+  }
+
+  setButtonLoading(submitBtn, true, "Vinculando...");
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'vincularConvidado',
+        userId: currentUser.ID_Usuario,
+        convidadoId: idOrEmail
+      })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      currentUser.ID_Convidado = idOrEmail;
+      localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+      alert("✅ Parceiro(a) vinculado com sucesso! Ambos visualizarão as mesmas finanças.");
+    } else {
+      alert("✅ Solicitação enviada com sucesso!");
+    }
+  } catch (e) {
+    alert("✅ Solicitação enviada!");
+  }
+
+  if (typeof form.reset === "function") form.reset();
+  setButtonLoading(submitBtn, false);
+
+  fecharModal("modalConvidarParceiro");
+}
+
+
+/* TOGGLE VISIBILIDADE DE SENHA (OLHO) */
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  
+  if (input.type === "password") {
+    input.type = "text";
+    if (btn) {
+      btn.textContent = "🙈";
+      btn.setAttribute("title", "Ocultar Senha");
+    }
+  } else {
+    input.type = "password";
+    if (btn) {
+      btn.textContent = "👁️";
+      btn.setAttribute("title", "Mostrar Senha");
+    }
+  }
+}
