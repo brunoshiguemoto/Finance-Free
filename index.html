@@ -1,231 +1,236 @@
 <!-- ============================================================================
-     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5)
+     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 4.0
      Arquivo: index.html
-     Descrição: Layout responsivo preparado para PWA / Android & iOS com Modais Interativos
+     Descrição: Menu Lateral Neon Retrátil, Apenas Botão (+), Educação Financeira,
+                Investimentos, Login e Classificações da Economia Familiar.
      ============================================================================ -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Finance Free</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- Chart.js para o Gráfico de Pizza -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <!-- CABEÇALHO & GAMIFICAÇÃO -->
+  <!-- CABEÇALHO & PROFILE -->
   <header class="app-header">
-    <div class="user-badge" onclick="abrirModalPerfil()">
-      <div class="avatar">BS</div>
+    <div class="user-badge" onclick="abrirModal('modalLogin')" style="cursor: pointer;">
+      <div class="avatar" id="userAvatar">BS</div>
       <div>
-        <h4 style="font-size: 0.95rem;">Bruno Shiguemoto</h4>
-        <span style="font-size: 0.75rem; color: #94a3b8;">Plano Familiar</span>
+        <h4 id="userNameDisplay" style="font-size: 0.95rem;">Bruno Shiguemoto</h4>
+        <span style="font-size: 0.72rem; color: #94a3b8;">Plano Compartilhado 🔑</span>
       </div>
     </div>
-    <div class="gamification-pill" onclick="abrirModalMedalhas()">
+    <div class="gamification-pill">
       🏆 <span id="pontosTotal">100 pts</span>
     </div>
   </header>
 
-  <!-- SELETOR DE MÊS -->
+  <!-- SELETOR MENSAL -->
   <div class="month-selector">
     <button class="month-btn" onclick="mudarMes(-1)">◀</button>
     <h3 id="displayMes">Setembro 2026</h3>
     <button class="month-btn" onclick="mudarMes(1)">▶</button>
   </div>
 
-  <!-- CARDS DE RESUMO -->
+  <!-- CARDS RESUMO -->
   <div class="summary-cards">
-    <div class="card card-receita">
+    <div class="card">
       <div class="card-title">Receitas do Mês</div>
       <div class="card-value value-receita" id="totalReceitas">R$ 0,00</div>
     </div>
-    <div class="card card-despesa">
+    <div class="card">
       <div class="card-title">Despesas do Mês</div>
       <div class="card-value value-despesa" id="totalDespesas">R$ 0,00</div>
     </div>
   </div>
 
-  <!-- GRÁFICO EM PIZZA DAS DESPESAS -->
-  <section class="chart-container">
-    <div class="chart-header">
-      <h4>MAIORES GASTOS DO MÊS</h4>
-      <span class="chart-subtitle" id="saldoMesText">Saldo: R$ 0,00</span>
-    </div>
+  <!-- GRÁFICO EM PIZZA -->
+  <section class="app-section">
+    <div class="section-title">MAIORES GASTOS DO MÊS (DESPESAS)</div>
     <div class="chart-wrapper">
       <canvas id="despesasChart"></canvas>
     </div>
   </section>
 
-  <!-- LISTA DE ÚLTIMOS LANÇAMENTOS DO MÊS -->
-  <section class="transactions-container">
-    <h4>LANÇAMENTOS DO MÊS</h4>
-    <div id="listaLancamentos" class="transactions-list">
-      <!-- Inserido dinamicamente via JS -->
-    </div>
-  </section>
+  <!-- MENU LATERAL DIREITO (NEON RETRÁTIL) -->
+  <aside class="sidebar-right" id="sidebarRight">
+    <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
+    <nav class="sidebar-nav">
+      <a class="sidebar-item active" onclick="toggleSidebar()"><span class="sidebar-icon">📊</span><span class="sidebar-label">Home</span></a>
+      <a class="sidebar-item" onclick="abrirModal('modalConta')"><span class="sidebar-icon">🏦</span><span class="sidebar-label">Contas</span></a>
+      <a class="sidebar-item" onclick="abrirModal('modalCartao')"><span class="sidebar-icon">💳</span><span class="sidebar-label">Cartões</span></a>
+      <a class="sidebar-item" onclick="abrirModal('modalEmprestimo')"><span class="sidebar-icon">🤝</span><span class="sidebar-label">Empréstimos</span></a>
+      <a class="sidebar-item" onclick="abrirModal('modalEduca')"><span class="sidebar-icon">🎓</span><span class="sidebar-label">Educação Financeira</span></a>
+      <a class="sidebar-item" onclick="abrirModal('modalInvest')"><span class="sidebar-icon">📈</span><span class="sidebar-label">Investimentos</span></a>
+      <a class="sidebar-item" onclick="abrirModal('modalLogin')"><span class="sidebar-icon">🔑</span><span class="sidebar-label">Login / Perfil</span></a>
+    </nav>
+  </aside>
 
-  <!-- NAVEGAÇÃO INFERIOR -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" onclick="mostrarAba('home')">📊 <span>Home</span></button>
-    <button class="nav-item" onclick="abrirModalContas()">🏦 <span>Contas</span></button>
-    <button class="btn-add-floating" onclick="abrirModalLancamento()" title="Novo Lançamento">+</button>
-    <button class="nav-item" onclick="abrirModalCartoes()">💳 <span>Cartões</span></button>
-    <button class="nav-item" onclick="abrirModalMedalhas()">🏅 <span>Medalhas</span></button>
-  </nav>
+  <!-- BOTÃO FLUTUANTE DE (+) -->
+  <button class="btn-floating-add" onclick="abrirModal('modalLancamento')">+</button>
 
-  <!-- ============================================================================
-       MODAIS INTERATIVOS
-       ============================================================================ -->
-
-  <!-- MODAL DE NOVO LANÇAMENTO (RECEITA / DESPESA) -->
-  <div id="modalLancamento" class="modal-overlay hidden">
+  <!-- MODAL 1: LANÇAMENTO RÁPIDO (+) -->
+  <div class="modal-overlay" id="modalLancamento">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Novo Lançamento</h3>
-        <button class="modal-close" onclick="fecharModalLancamento()">✕</button>
+        <h3 class="modal-title">Novo Lançamento</h3>
+        <button class="close-btn" onclick="fecharModal('modalLancamento')">✕</button>
       </div>
-      
-      <div class="tipo-toggle">
-        <button type="button" id="btnTipoDespesa" class="toggle-btn active-despesa" onclick="setTipoLancamento('DESPESA')">💸 Despesa</button>
-        <button type="button" id="btnTipoReceita" class="toggle-btn" onclick="setTipoLancamento('RECEITA')">💰 Receita</button>
-      </div>
-
-      <form id="formLancamento" onsubmit="salvarLancamento(event)">
+      <form onsubmit="salvarLancamento(event)">
         <div class="form-group">
-          <label for="inputDescricao">Descrição</label>
-          <input type="text" id="inputDescricao" placeholder="Ex: Mercado, Salário, Luz" required>
-        </div>
-
-        <div class="form-group">
-          <label for="inputValor">Valor (R$)</label>
-          <input type="number" step="0.01" id="inputValor" placeholder="0,00" required>
-        </div>
-
-        <div class="form-group">
-          <label for="selectCategoria" id="labelCategoria">Destino da Despesa</label>
-          <select id="selectCategoria" required>
-            <!-- Opções inseridas dinamicamente -->
+          <label>Tipo de Transação</label>
+          <select class="form-control" id="tipoLancamento" onchange="toggleTipoLancamento()">
+            <option value="Despesa">Despesa 💸</option>
+            <option value="Receita">Receita 💰</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="inputDataFato">Data do Lançamento</label>
-          <input type="date" id="inputDataFato" required>
+          <label>Descrição</label>
+          <input type="text" class="form-control" id="inputDescricao" placeholder="Ex: Supermercado, Luz, Salário" required>
         </div>
 
-        <div class="modal-actions">
-          <button type="button" class="btn-cancelar" onclick="fecharModalLancamento()">Cancelar</button>
-          <button type="submit" class="btn-salvar">Salvar Lançamento</button>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="inputValor" placeholder="0.00" required>
         </div>
+
+        <div class="form-group" id="groupClassificacaoDespesa">
+          <label>Classificação da Despesa</label>
+          <select class="form-control" id="selectClassificacaoDespesa">
+            <option value="Moradia">Moradia (Aluguel, Luz, Água, Gás, Internet)</option>
+            <option value="Alimentação">Alimentação (Supermercado, Feira, Restaurantes)</option>
+            <option value="Transporte">Transporte (Combustível, Uber, Ônibus, IPVA)</option>
+            <option value="Saúde">Saúde & Bem-Estar (Plano, Farmácia, Consultas)</option>
+            <option value="Educação">Educação (Escola, Faculdade, Cursos, Livros)</option>
+            <option value="Lazer">Lazer & Entretenimento (Viagens, Cinema, Streaming)</option>
+            <option value="Vestuário">Vestuário & Acessórios</option>
+            <option value="Cuidados Pessoais">Cuidados Pessoais (Salão, Barbearia, Cosméticos)</option>
+            <option value="Impostos">Impostos & Taxas Bancárias</option>
+            <option value="Dívidas">Dívidas & Financiamentos</option>
+            <option value="Outras Despesas">Outras Despesas</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="groupClassificacaoReceita" style="display:none;">
+          <label>Classificação da Receita</label>
+          <select class="form-control" id="selectClassificacaoReceita">
+            <option value="Salário">Salário / Pró-labore</option>
+            <option value="Renda Extra">Renda Extra / Freelance</option>
+            <option value="Rendimentos">Rendimentos de Investimentos</option>
+            <option value="Aluguéis">Aluguéis Recebidos</option>
+            <option value="13º Salário / Férias">13º Salário / Férias</option>
+            <option value="Reembolsos">Reembolsos & Restituições</option>
+            <option value="Presentes / Outros">Presentes & Outras Receitas</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" class="form-control" id="inputData">
+        </div>
+
+        <div class="form-group">
+          <label>Observações / Justificativa</label>
+          <textarea class="form-control" id="inputObservacoes" rows="2" placeholder="Anote uma explicação para você e seu cônjuge..."></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Salvar Lançamento</button>
       </form>
     </div>
   </div>
 
-  <!-- MODAL DE CONTAS BANCÁRIAS -->
-  <div id="modalContas" class="modal-overlay hidden">
+  <!-- MODAL 2: CADASTRO DE CONTAS BANCÁRIAS -->
+  <div class="modal-overlay" id="modalConta">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>🏦 Contas Bancárias</h3>
-        <button class="modal-close" onclick="fecharModalContas()">✕</button>
+        <h3 class="modal-title">Cadastrar Conta Bancária</h3>
+        <button class="close-btn" onclick="fecharModal('modalConta')">✕</button>
       </div>
-      <div class="modal-body">
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Selecione o banco brasileiro para registrar sua conta:</p>
-        <form id="formConta" onsubmit="salvarConta(event)">
-          <div class="form-group">
-            <label for="selectBanco">Instituição Financeira</label>
-            <select id="selectBanco" required></select>
-          </div>
-          <div class="form-group">
-            <label for="inputAgencia">Agência</label>
-            <input type="text" id="inputAgencia" placeholder="0001">
-          </div>
-          <div class="form-group">
-            <label for="inputConta">Número da Conta</label>
-            <input type="text" id="inputConta" placeholder="12345-6">
-          </div>
-          <div class="form-group">
-            <label for="inputSaldoInicial">Saldo Inicial (R$)</label>
-            <input type="number" step="0.01" id="inputSaldoInicial" placeholder="1000,00" required>
-          </div>
-          <button type="submit" class="btn-salvar" style="width: 100%;">Cadastrar Conta</button>
-        </form>
-
-        <h4 style="margin-top: 20px; font-size: 0.9rem; color: #94a3b8;">Suas Contas</h4>
-        <div id="listaContas" class="info-list"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL DE CARTÕES DE CRÉDITO -->
-  <div id="modalCartoes" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>💳 Cartões de Crédito</h3>
-        <button class="modal-close" onclick="fecharModalCartoes()">✕</button>
-      </div>
-      <div class="modal-body">
-        <form id="formCartao" onsubmit="salvarCartao(event)">
-          <div class="form-group">
-            <label for="inputNomeCartao">Nome / Apelido do Cartão</label>
-            <input type="text" id="inputNomeCartao" placeholder="Ex: Nubank, Itaú Black" required>
-          </div>
-          <div class="form-group">
-            <label for="inputLimiteTotal">Limite Total (R$)</label>
-            <input type="number" step="0.01" id="inputLimiteTotal" placeholder="5000,00" required>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="inputFechamento">Dia Fechamento</label>
-              <input type="number" min="1" max="31" id="inputFechamento" placeholder="10" required>
-            </div>
-            <div class="form-group">
-              <label for="inputVencimento">Dia Vencimento</label>
-              <input type="number" min="1" max="31" id="inputVencimento" placeholder="17" required>
-            </div>
-          </div>
-          <button type="submit" class="btn-salvar" style="width: 100%;">Cadastrar Cartão</button>
-        </form>
-
-        <h4 style="margin-top: 20px; font-size: 0.9rem; color: #94a3b8;">Cartões Cadastrados</h4>
-        <div id="listaCartoes" class="info-list"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL DE GAMIFICAÇÃO & MEDALHAS -->
-  <div id="modalMedalhas" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>🏅 Suas Conquistas</h3>
-        <button class="modal-close" onclick="fecharModalMedalhas()">✕</button>
-      </div>
-      <div class="modal-body text-center">
-        <div class="medal-badge-large">🏆</div>
-        <h3 id="modalNivelAtual" style="margin-top: 10px; color: #38bdf8;">Iniciante</h3>
-        <p style="color: #94a3b8; font-size: 0.85rem;">Pontuação Acumulada: <strong id="modalPontos" style="color: #f1f5f9;">100 pts</strong></p>
-        
-        <div class="badges-grid">
-          <div class="badge-item active-badge">
-            <span>🚀</span>
-            <small>Primeiro Acesso</small>
-          </div>
-          <div class="badge-item active-badge">
-            <span>📝</span>
-            <small>Primeiro Lançamento</small>
-          </div>
-          <div class="badge-item">
-            <span>📅</span>
-            <small>7 Dias Seguidos</small>
-          </div>
-          <div class="badge-item">
-            <span>💰</span>
-            <small>Meta de Poupança</small>
-          </div>
+      <form onsubmit="salvarNovaConta(event)">
+        <div class="form-group">
+          <label>Selecione o Banco</label>
+          <select class="form-control" id="selectBancoConta" required></select>
         </div>
+        <div class="form-group">
+          <label>Agência</label>
+          <input type="text" class="form-control" id="inputAgencia" placeholder="0001">
+        </div>
+        <div class="form-group">
+          <label>Conta com Dígito</label>
+          <input type="text" class="form-control" id="inputConta" placeholder="12345-6">
+        </div>
+        <div class="form-group">
+          <label>Saldo Inicial (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="inputSaldoInicial" placeholder="0.00">
+        </div>
+        <button type="submit" class="btn-submit">Cadastrar Conta</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: EDUCAÇÃO FINANCEIRA (50 / 30 / 10 / 10) -->
+  <div class="modal-overlay" id="modalEduca">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🎓 Educação Financeira</h3>
+        <button class="close-btn" onclick="fecharModal('modalEduca')">✕</button>
       </div>
+      
+      <div class="score-card">
+        <div style="font-size: 0.82rem; color: #94a3b8;">SAÚDE FINANCEIRA MENSAL</div>
+        <div class="score-number" id="scoreEducaNum">85</div>
+        <div style="font-size: 0.85rem; color: #10b981;">Meta Recomendada: 50/30/10/10</div>
+      </div>
+
+      <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 12px;">
+        <p><strong>50% Despesas Essenciais:</strong> Moradia, Saúde, Alimentação.</p>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="barEssenciais" style="width: 52%;"></div></div>
+
+        <p style="margin-top:10px;"><strong>30% Investimentos & Futuro:</strong> Aportes ativos.</p>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="barInvest" style="width: 28%;"></div></div>
+
+        <p style="margin-top:10px;"><strong>10% Educação & Crescimento:</strong> Cursos e livros.</p>
+
+        <p style="margin-top:10px;"><strong>10% Gastos Livres:</strong> Lazer e estilo de vida.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: INVESTIMENTOS -->
+  <div class="modal-overlay" id="modalInvest">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">📈 Carteira de Investimentos</h3>
+        <button class="close-btn" onclick="fecharModal('modalInvest')">✕</button>
+      </div>
+
+      <div class="score-card">
+        <div style="font-size: 0.82rem; color: #94a3b8;">ALINHAMENTO DE CARTEIRA</div>
+        <div class="score-number" id="scoreInvestNum" style="color: #8b5cf6;">90</div>
+        <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 4px;">Alvo: 25% Ações | 25% FIIs | 15% Prev | 10% Crypto | 25% Tesouro</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: LOGIN / SESSÃO -->
+  <div class="modal-overlay" id="modalLogin">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🔑 Acesso do Usuário</h3>
+        <button class="close-btn" onclick="fecharModal('modalLogin')">✕</button>
+      </div>
+      <form onsubmit="realizarLogin(event)">
+        <div class="form-group">
+          <label>Seu E-mail Cadastrado</label>
+          <input type="email" class="form-control" id="loginEmail" placeholder="seuemail@exemplo.com" required>
+        </div>
+        <button type="submit" class="btn-submit">Entrar na Conta</button>
+      </form>
     </div>
   </div>
 
