@@ -1,5 +1,5 @@
 // ============================================================================
-// FINANCE FREE - BANCO DE DADOS DE BANCOS DO BRASIL - VERSÃO 11.0
+// FINANCE FREE - BANCO DE DADOS DE BANCOS DO BRASIL - VERSÃO 12.0
 // Arquivo: bancos_brasil.js
 // ============================================================================
 
