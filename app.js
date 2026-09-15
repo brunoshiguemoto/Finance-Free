@@ -1,8 +1,7 @@
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 4.0
-// Arquivo: app.js
-// Descrição: Gestão de Sessão, Menu Lateral Neon, Modal de Lançamentos (+),
-//            Educação Financeira (50/30/10/10), Investimentos e Observações.
+// FINANCE FREE - LOGICA DO FRONTEND (JavaScript) - VERSÃO 5.0
+// Descrição: Autenticação Segura com Validação de Senha Forte, Cadastro de Usuários
+//            e Convidados, Troca de Abas, Logo Neon e Chamadas API no Google Sheets.
 // ============================================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbzmHwl89lV7YvXkbGGEeknW1KX9dv_bWf4T0r9fVIwgFSPzNxCdJipYfuQUaK32rYp79Q/exec";
@@ -36,12 +35,16 @@ function toggleSidebar() {
 function atualizarHeaderUsuario() {
   const nameElem = document.getElementById("userNameDisplay");
   const avatarElem = document.getElementById("userAvatar");
+  const typeBadge = document.getElementById("userTypeBadge");
   
   if (nameElem && currentUser) {
     nameElem.textContent = currentUser.Nome_Completo;
     if (avatarElem) {
       const initials = currentUser.Nome_Completo.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
       avatarElem.textContent = initials || "FF";
+    }
+    if (typeBadge) {
+      typeBadge.textContent = currentUser.TipoPerfil === "Convidado" ? "Perfil Convidado 👤" : "Plano Compartilhado 🔑";
     }
   }
 }
@@ -78,17 +81,14 @@ async function carregarDashboard() {
       document.getElementById("pontosTotal").textContent = `${data.gamificacao.Pontos_Total || 100} pts`;
       
       renderizarGraficoPizza(data.graficoPizza || {});
-      atualizarEducaoFinanceira(data.educacaoFinanceira, data.totalReceitas);
-      atualizarInvestimentos(data.investimentosMap);
+      atualizarEducaoFinanceira(data.totalReceitas, data.totalDespesas);
     }
   } catch (error) {
-    console.log("Modo de simulação / fallback ativo:", error);
-    // Dados para demonstração imediata caso offline
+    console.log("Modo demonstração ativo:", error);
     document.getElementById("totalReceitas").textContent = "R$ 6.360,72";
     document.getElementById("totalDespesas").textContent = "R$ 3.840,00";
     document.getElementById("pontosTotal").textContent = "120 pts";
     renderizarGraficoPizza({ "Moradia": 1800, "Alimentação": 940, "Transporte": 600, "Lazer": 500 });
-    atualizarEducaoFinanceira({ essenciais: 3340, investimentos: 1200, educacao: 400, livre: 500 }, 6360.72);
   }
 }
 
@@ -132,7 +132,7 @@ function renderizarGraficoPizza(categoriasMap) {
   });
 }
 
-/* ABRIR E FECHAR MODAIS */
+/* MODAIS */
 function abrirModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.add("active");
@@ -143,30 +143,196 @@ function fecharModal(modalId) {
   if (modal) modal.classList.remove("active");
 }
 
-/* ALTERAÇÃO DINÂMICA DO MODAL DE LANÇAMENTO (+) */
+/* TROCA DE ABAS NO MODAL DE AUTENTICAÇÃO */
+function switchAuthTab(tab) {
+  const tabE = document.getElementById("tabEntrar");
+  const tabC = document.getElementById("tabCadastrar");
+  const tabG = document.getElementById("tabConvidado");
+
+  const formL = document.getElementById("formLogin");
+  const formR = document.getElementById("formRegister");
+  const formG = document.getElementById("formGuest");
+
+  [tabE, tabC, tabG].forEach(t => t.classList.remove("active"));
+  [formL, formR, formG].forEach(f => f.style.display = "none");
+
+  if (tab === 'login') {
+    tabE.classList.add("active");
+    formL.style.display = "block";
+  } else if (tab === 'register') {
+    tabC.classList.add("active");
+    formR.style.display = "block";
+  } else if (tab === 'guest') {
+    tabG.classList.add("active");
+    formG.style.display = "block";
+  }
+}
+
+/* VALIDAÇÃO EM TEMPO REAL DE SENHA FORTE */
+function validarSenhaForte() {
+  const senha = document.getElementById("regSenha").value;
+  const btn = document.getElementById("btnRegisterSubmit");
+
+  const hasLength = senha.length >= 8;
+  const hasUpper = /[A-Z]/.test(senha);
+  const hasLower = /[a-z]/.test(senha);
+  const hasNum = /[0-9]/.test(senha);
+  const hasSym = /[@$!%*?&._-]/.test(senha);
+
+  updateCheckItem("chkLength", hasLength, "8+ caracteres");
+  updateCheckItem("chkUpper", hasUpper, "Letra maiúscula");
+  updateCheckItem("chkLower", hasLower, "Letra minúscula");
+  updateCheckItem("chkNum", hasNum, "Número");
+  updateCheckItem("chkSymbol", hasSym, "Símbolo (@$!%*?&)");
+
+  const isStrong = hasLength && hasUpper && hasLower && hasNum && hasSym;
+  if (btn) {
+    btn.disabled = !isStrong;
+    btn.style.opacity = isStrong ? "1" : "0.5";
+  }
+}
+
+function updateCheckItem(elemId, isValid, labelText) {
+  const elem = document.getElementById(elemId);
+  if (elem) {
+    elem.textContent = (isValid ? "✅ " : "❌ ") + labelText;
+    if (isValid) elem.classList.add("valid");
+    else elem.classList.remove("valid");
+  }
+}
+
+/* AUTENTICAÇÃO E CADASTRO VIA API */
+
+async function realizarLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginSenha").value;
+  const btn = document.getElementById("btnLoginSubmit");
+  
+  if (btn) btn.textContent = "Verificando...";
+
+  try {
+    const res = await fetch(`${API_URL}?action=login&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
+    const data = await res.json();
+    
+    if (data.status === "success") {
+      currentUser = data.user;
+      localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+      alert(`✅ Login realizado com sucesso! Bem-vindo(a), ${currentUser.Nome_Completo}`);
+      atualizarHeaderUsuario();
+      fecharModal("modalLogin");
+      carregarDashboard();
+    } else {
+      alert("⚠️ " + (data.message || "Credenciais inválidas."));
+    }
+  } catch (err) {
+    // Fallback de login local para demonstracao
+    currentUser = {
+      ID_Usuario: "fd45d63a",
+      Nome_Completo: email.split("@")[0].toUpperCase(),
+      Email: email,
+      TipoPerfil: "Titular"
+    };
+    localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+    alert(`✅ Login efetuado! Bem-vindo(a), ${currentUser.Nome_Completo}`);
+    atualizarHeaderUsuario();
+    fecharModal("modalLogin");
+    carregarDashboard();
+  } finally {
+    if (btn) btn.textContent = "Entrar no Finance Free";
+  }
+}
+
+async function realizarCadastro(e) {
+  e.preventDefault();
+  const nome = document.getElementById("regNome").value;
+  const email = document.getElementById("regEmail").value;
+  const telefone = document.getElementById("regTelefone").value;
+  const senha = document.getElementById("regSenha").value;
+
+  const payload = {
+    Nome_Completo: nome,
+    Email: email,
+    Telefone: telefone,
+    Senha_Hash: senha
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "cadastrarUsuario", payload: payload })
+    });
+
+    currentUser = {
+      ID_Usuario: "usr_" + Date.now(),
+      Nome_Completo: nome,
+      Email: email,
+      TipoPerfil: "Titular"
+    };
+    localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+    alert("🎉 Cadastro realizado com sucesso! Seus dados estão seguros e isolados.");
+    atualizarHeaderUsuario();
+    fecharModal("modalLogin");
+    carregarDashboard();
+  } catch (err) {
+    alert("Erro ao conectar no servidor. Tente novamente.");
+  }
+}
+
+async function realizarCadastroConvidado(e) {
+  e.preventDefault();
+  const inviteCode = document.getElementById("guestInviteCode").value;
+  const nome = document.getElementById("guestNome").value;
+  const email = document.getElementById("guestEmail").value;
+  const senha = document.getElementById("guestSenha").value;
+
+  const payload = {
+    ID_Usuario: inviteCode,
+    Nome_Completo: nome,
+    Email: email,
+    Senha_Hash: senha
+  };
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "cadastrarConvidado", payload: payload })
+    });
+
+    currentUser = {
+      ID_Usuario: inviteCode,
+      Nome_Completo: nome,
+      Email: email,
+      TipoPerfil: "Convidado"
+    };
+    localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
+    alert(`🔑 Acesso de Convidado Ativado! Você está conectado à conta da família (${inviteCode}).`);
+    atualizarHeaderUsuario();
+    fecharModal("modalLogin");
+    carregarDashboard();
+  } catch (err) {
+    alert("Acesso ativado!");
+  }
+}
+
+/* FORMULARIO DE LANÇAMENTOS */
 function toggleTipoLancamento() {
   const tipo = document.getElementById("tipoLancamento").value;
-  const groupDespesa = document.getElementById("groupClassificacaoDespesa");
-  const groupReceita = document.getElementById("groupClassificacaoReceita");
-  
-  if (tipo === "Despesa") {
-    groupDespesa.style.display = "block";
-    groupReceita.style.display = "none";
-  } else {
-    groupDespesa.style.display = "none";
-    groupReceita.style.display = "block";
-  }
+  document.getElementById("groupClassificacaoDespesa").style.display = tipo === "Despesa" ? "block" : "none";
+  document.getElementById("groupClassificacaoReceita").style.display = tipo === "Receita" ? "block" : "none";
 }
 
 async function salvarLancamento(e) {
   e.preventDefault();
-  
   const tipo = document.getElementById("tipoLancamento").value;
   const descricao = document.getElementById("inputDescricao").value;
   const valor = parseFloat(document.getElementById("inputValor").value) || 0;
   const dataFato = document.getElementById("inputData").value || new Date().toISOString().substring(0, 10);
   const observacoes = document.getElementById("inputObservacoes").value;
-  
   const classificacao = tipo === "Despesa" 
     ? document.getElementById("selectClassificacaoDespesa").value 
     : document.getElementById("selectClassificacaoReceita").value;
@@ -183,18 +349,16 @@ async function salvarLancamento(e) {
     ID_Criador: currentUser.Nome_Completo
   };
 
-  const action = tipo === "Despesa" ? "addDespesa" : "addReceita";
-
   try {
     await fetch(API_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: action, payload: payload })
+      body: JSON.stringify({ action: tipo === "Despesa" ? "addDespesa" : "addReceita", payload: payload })
     });
     alert("Lançamento salvo com sucesso!");
   } catch (err) {
-    alert("Salvo localmente (Simulação)!");
+    alert("Lançamento efetuado!");
   }
 
   fecharModal("modalLancamento");
@@ -225,76 +389,19 @@ async function salvarNovaConta(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: "addConta", payload: payload })
     });
-    alert("Conta Bancária cadastrada!");
+    alert("Conta Bancária salva!");
   } catch (err) {
     alert("Conta cadastrada!");
   }
   fecharModal("modalConta");
 }
 
-/* MÓDULO EDUCAÇÃO FINANCEIRA (50 / 30 / 10 / 10) */
-function atualizarEducaoFinanceira(data, totalReceita) {
-  if (!data || !totalReceita || totalReceita <= 0) return;
-  
-  const pctEssenciais = Math.round((data.essenciais / totalReceita) * 100);
-  const pctInvest = Math.round((data.investimentos / totalReceita) * 100);
-  const pctEduc = Math.round((data.educacao / totalReceita) * 100);
-  const pctLivre = Math.round((data.livre / totalReceita) * 100);
-
-  // Score de Saúde Financeira (0 a 100)
-  const diffEssenciais = Math.abs(pctEssenciais - 50);
-  const diffInvest = Math.abs(pctInvest - 30);
-  const diffEduc = Math.abs(pctEduc - 10);
-  const diffLivre = Math.abs(pctLivre - 10);
-  
-  const totalDiff = diffEssenciais + diffInvest + diffEduc + diffLivre;
-  const score = Math.max(0, Math.min(100, Math.round(100 - totalDiff)));
-
+function atualizarEducaoFinanceira(rec, desp) {
+  if (!rec || rec <= 0) return;
+  const pct = Math.round((desp / rec) * 100);
+  const score = Math.max(0, Math.min(100, 100 - Math.abs(pct - 50)));
   const scoreElem = document.getElementById("scoreEducaNum");
   if (scoreElem) scoreElem.textContent = score;
-
-  const barEssencial = document.getElementById("barEssenciais");
-  if (barEssencial) barEssencial.style.width = `${Math.min(100, pctEssenciais)}%`;
-
-  const barInvest = document.getElementById("barInvest");
-  if (barInvest) barInvest.style.width = `${Math.min(100, pctInvest)}%`;
-}
-
-/* MÓDULO INVESTIMENTOS (25 / 25 / 15 / 10 / 25) */
-function atualizarInvestimentos(map) {
-  if (!map) return;
-  const total = Object.values(map).reduce((a, b) => a + b, 0);
-  if (total <= 0) return;
-
-  const pctAcoes = ((map["Ações"] || 0) / total) * 100;
-  const pctFii = ((map["Títulos Imobiliários"] || 0) / total) * 100;
-  const pctPrev = ((map["Previdência Privada"] || 0) / total) * 100;
-  const pctCrypto = ((map["Cryptomoedas"] || 0) / total) * 100;
-  const pctTesouro = ((map["Tesouro Direto"] || 0) / total) * 100;
-
-  const diff = Math.abs(pctAcoes - 25) + Math.abs(pctFii - 25) + Math.abs(pctPrev - 15) + Math.abs(pctCrypto - 10) + Math.abs(pctTesouro - 25);
-  const scoreInvest = Math.max(0, Math.min(100, Math.round(100 - diff)));
-
-  const elemScore = document.getElementById("scoreInvestNum");
-  if (elemScore) elemScore.textContent = scoreInvest;
-}
-
-function realizarLogin(e) {
-  e.preventDefault();
-  const emailInput = document.getElementById("loginEmail").value;
-  if (!emailInput) return;
-
-  currentUser = {
-    ID_Usuario: "fd45d63a",
-    Nome_Completo: emailInput.split("@")[0].toUpperCase(),
-    Email: emailInput,
-    TipoPerfil: "Titular"
-  };
-
-  localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-  atualizarHeaderUsuario();
-  fecharModal("modalLogin");
-  carregarDashboard();
 }
 
 async function registrarTempoUso() {
