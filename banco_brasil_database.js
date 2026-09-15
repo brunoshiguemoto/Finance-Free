@@ -1,5 +1,5 @@
 // ============================================================================
-// FINANCE FREE - BANCO DE DADOS DE BANCOS DO BRASIL
+// FINANCE FREE - BANCO DE DADOS DE BANCOS DO BRASIL - VERSÃO 9.0
 // Arquivo: bancos_brasil.js
 // ============================================================================
 
@@ -16,13 +16,12 @@ const BANCOS_BRASIL = [
   { codigo: "422", nome: "Banco Safra S.A." },
   { codigo: "655", nome: "Banco Neon S.A." },
   { codigo: "041", nome: "Banco Banrisul S.A." },
-  { codigo: "756", nome: "Sシステム / SICOOB" },
+  { codigo: "756", nome: "SICOOB" },
   { codigo: "748", nome: "SICREDI S.A." },
   { codigo: "637", nome: "Banco BTG Pactual S.A." },
   { codigo: "389", nome: "Banco Mercantil do Brasil S.A." },
   { codigo: "070", nome: "BRB - Banco de Brasília S.A." },
   { codigo: "136", nome: "Unicred Cooperativa" },
-  { codigo: "208", nome: "Banco BTG Pactual S.A." },
   { codigo: "999", nome: "Outra Instituição Financeira" }
 ];
 
