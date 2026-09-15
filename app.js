@@ -1,5 +1,43 @@
+const BANCOS_BRASIL = [
+  { codigo: "000", nome: "Wallet (Dinheiro Físico / Carteira)" },
+  { codigo: "001", nome: "Banco do Brasil S.A." },
+  { codigo: "033", nome: "Banco Santander (Brasil) S.A." },
+  { codigo: "104", nome: "Caixa Econômica Federal" },
+  { codigo: "237", nome: "Banco Bradesco S.A." },
+  { codigo: "341", nome: "Itaú Unibanco S.A." },
+  { codigo: "077", nome: "Banco Inter S.A." },
+  { codigo: "260", nome: "Nu Pagamentos S.A. (Nubank)" },
+  { codigo: "336", nome: "Banco C6 S.A." },
+  { codigo: "212", nome: "Banco Original S.A." },
+  { codigo: "422", nome: "Banco Safra S.A." },
+  { codigo: "655", nome: "Banco Neon S.A." },
+  { codigo: "041", nome: "Banco Banrisul S.A." },
+  { codigo: "756", nome: "SICOOB" },
+  { codigo: "748", nome: "SICREDI S.A." },
+  { codigo: "637", nome: "Banco BTG Pactual S.A." },
+  { codigo: "389", nome: "Banco Mercantil do Brasil S.A." },
+  { codigo: "070", nome: "BRB - Banco de Brasília S.A." },
+  { codigo: "136", nome: "Unicred Cooperativa" },
+  { codigo: "999", nome: "Outra Instituição Financeira" }
+];
+
+function carregarSelectBancos(selectId) {
+  const selectElem = document.getElementById(selectId);
+  if (!selectElem) return;
+  
+  if (selectElem.options.length <= 1) {
+    selectElem.innerHTML = '<option value="">-- Selecione o Banco --</option>';
+    BANCOS_BRASIL.forEach(banco => {
+      const opt = document.createElement("option");
+      opt.value = `${banco.codigo} - ${banco.nome}`;
+      opt.textContent = `${banco.codigo} - ${banco.nome}`;
+      selectElem.appendChild(opt);
+    });
+  }
+}
+
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 13.0 (ESPECIALISTA)
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 15.0 (ESPECIALISTA)
 // Arquivo: app.js
 // Descrição: Bloqueio Total de Acesso sem Login, Zero Dados Mockados/Default,
 //            Autenticação Rígida por ID_Usuario e Suporte a Convidados com ID_Titular.
@@ -211,6 +249,15 @@ function navegarParaView(viewId) {
   const sb = document.getElementById("sidebarRight");
   if (sb) sb.classList.remove("expanded");
 
+  const btnFloat = document.querySelector(".btn-floating-add");
+  if (btnFloat) {
+    if (viewId === "viewContas") {
+      btnFloat.style.display = "none";
+    } else {
+      btnFloat.style.display = "flex";
+    }
+  }
+
   if (viewId === "viewReceitas") carregarReceitasView();
   else if (viewId === "viewDespesas") carregarDespesasView();
   else if (viewId === "viewContas") carregarContasView();
@@ -384,30 +431,117 @@ async function carregarContasView() {
     const res = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
     const data = await res.json();
     
-    if (Array.isArray(data) && data.length > 0) {
-      data.sort((a, b) => String(a.Intituicao || '').localeCompare(String(b.Intituicao || '')));
-      let html = "";
-      data.forEach(item => {
-        const idTrans = item.ID_Banco || item.ID_Transacao || item.Conta;
+    let accountsList = Array.isArray(data) ? data : [];
+
+    // Localizar a conta Wallet se já foi cadastrada na planilha
+    const walletIdx = accountsList.findIndex(item => 
+      String(item.ID_Banco) === "000" || 
+      String(item.Conta).toUpperCase() === "WALLET" || 
+      (item.Intituicao && item.Intituicao.toLowerCase().includes("wallet"))
+    );
+
+    let walletAccount = null;
+    if (walletIdx !== -1) {
+      walletAccount = accountsList.splice(walletIdx, 1)[0];
+    } else {
+      // Conta Wallet padrão zerada se ainda não existir registro
+      walletAccount = {
+        ID_Banco: "000",
+        Intituicao: "000 - Wallet (Dinheiro Físico / Carteira)",
+        Agencia: "0000",
+        Conta: "WALLET",
+        "Saldo Inicial": 0,
+        Saldo_Atual: 0,
+        ID_Usuario: currentUser.ID_Usuario,
+        isDefaultWallet: true
+      };
+    }
+
+    // Ordenar demais contas por nome de instituição
+    accountsList.sort((a, b) => String(a.Intituicao || '').localeCompare(String(b.Intituicao || '')));
+
+    // Colocar a conta Wallet sempre no topo
+    accountsList.unshift(walletAccount);
+
+    let html = "";
+    accountsList.forEach(item => {
+      const idTrans = item.ID_Banco || item.ID_Transacao || item.Conta;
+      const isWallet = (String(item.ID_Banco) === "000" || String(item.Conta) === "WALLET" || item.isDefaultWallet);
+      const icon = isWallet ? "💵" : "🏦";
+      const title = isWallet ? "Wallet (Dinheiro Físico / Carteira)" : (item.Intituicao || 'Conta Bancária');
+      const subtitle = isWallet ? "Dinheiro em Mãos • Clique para definir/alterar saldo" : `Agência: ${item.Agencia || '-'} | Conta: ${item.Conta || '-'}`;
+      const saldo = parseFloat(item.Saldo_Atual !== undefined ? item.Saldo_Atual : (item["Saldo Inicial"] || 0)) || 0;
+      const saldoInicial = parseFloat(item["Saldo Inicial"] || 0);
+
+      if (isWallet) {
+        html += `
+          <div class="data-item" style="border: 1px solid var(--accent-green); background: rgba(16, 185, 129, 0.08); cursor: pointer;" onclick="abrirModalEditarWallet(${saldoInicial})">
+            <div class="data-item-info">
+              <h5 style="color: var(--accent-green);">💵 ${title}</h5>
+              <span style="color: #cbd5e1;">${subtitle}</span>
+            </div>
+            <div class="data-item-value">
+              <div style="text-align: right;">
+                <span class="value-receita" style="font-weight:bold; font-size:1.1rem;">${formatarMoeda(saldo)}</span>
+                <div style="font-size: 0.72rem; color: #10b981; font-weight:600; margin-top:2px;">✏️ Editar Saldo</div>
+              </div>
+            </div>
+          </div>`;
+      } else {
         html += `
           <div class="data-item">
             <div class="data-item-info">
-              <h5>🏦 ${item.Intituicao || 'Conta Bancária'}</h5>
-              <span>Agência: ${item.Agencia || '-'} | Conta: ${item.Conta || '-'}</span>
+              <h5>${icon} ${title}</h5>
+              <span>${subtitle}</span>
             </div>
             <div class="data-item-value">
-              <span class="value-receita" style="font-weight:bold;">${formatarMoeda(item.Saldo_Atual || item["Saldo Inicial"] || 0)}</span>
+              <span class="value-receita" style="font-weight:bold;">${formatarMoeda(saldo)}</span>
               <button class="btn-delete-icon" onclick="deletarConta('${idTrans}')">✕</button>
             </div>
           </div>`;
-      });
-      container.innerHTML = html;
-    } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta bancária ou Wallet cadastrada.</p>";
-    }
+      }
+    });
+
+    container.innerHTML = html;
   } catch (e) {
     container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta cadastrada.</p>";
   }
+}
+
+function abrirModalEditarWallet(saldoAtual) {
+  const input = document.getElementById("inputSaldoWallet");
+  if (input) input.value = saldoAtual || 0;
+  abrirModal("modalEditarWallet");
+}
+
+async function salvarSaldoWallet(e) {
+  e.preventDefault();
+  const valor = parseFloat(document.getElementById("inputSaldoWallet").value) || 0;
+  
+  const payload = {
+    ID_Banco: "000",
+    Intituicao: "000 - Wallet (Dinheiro Físico / Carteira)",
+    Agencia: "0000",
+    Conta: "WALLET",
+    "Saldo Inicial": valor,
+    Saldo_Atual: valor,
+    ID_Usuario: currentUser.ID_Usuario,
+    ID_Criador: currentUser.Nome_Completo
+  };
+
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "addConta", payload: payload, userId: currentUser.ID_Usuario })
+    });
+    alert("Saldo da Wallet atualizado com sucesso!");
+  } catch (err) {
+    alert("Saldo da Wallet salvo!");
+  }
+  fecharModal("modalEditarWallet");
+  carregarContasView();
 }
 
 async function carregarCartoesView() {
