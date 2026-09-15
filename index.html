@@ -1,6 +1,8 @@
 <!-- ============================================================================
-     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 12.0
+     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 13.0 (ESPECIALISTA)
      Arquivo: index.html
+     Descrição: Tela de Autenticação Rígida com Abas de Login, Cadastro de Titular,
+                Convidado (com ID_Titular) e Criptografia Total dos Dados.
      ============================================================================ -->
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -13,16 +15,95 @@
 </head>
 <body>
 
-  <!-- CONTEÚDO PRINCIPAL -->
-  <main class="main-content" id="mainContent">
+  <!-- TELA DE LOGIN & AUTENTICAÇÃO OBRIGATÓRIA (BLOQUEIA ACESSO NÃO AUTORIZADO) -->
+  <div class="auth-overlay" id="authScreen">
+    <div class="auth-card">
+      <img src="finance_free_logo.png" alt="Finance Free Logo" class="auth-logo" onerror="this.style.display='none'">
+      <h2 style="font-size: 1.4rem; color: #f8fafc; margin-bottom: 4px;">Finance Free</h2>
+      <p style="font-size: 0.78rem; color: #94a3b8;">Gestão Financeira Familiar com Criptografia AES-256</p>
+
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" id="tabBtnLogin" onclick="alternarAbaAuth('login')">Entrar</button>
+        <button class="auth-tab-btn" id="tabBtnCadast" onclick="alternarAbaAuth('cadast')">Criar Conta</button>
+        <button class="auth-tab-btn" id="tabBtnConvid" onclick="alternarAbaAuth('convid')">Sou Convidado</button>
+      </div>
+
+      <!-- ABA 1: LOGIN -->
+      <form id="formLoginTab" onsubmit="realizarLoginSubmit(event)">
+        <div class="form-group">
+          <label>Seu E-mail</label>
+          <input type="email" class="form-control" id="loginEmailInput" placeholder="seuemail@exemplo.com" required>
+        </div>
+        <div class="form-group">
+          <label>Sua Senha</label>
+          <input type="password" class="form-control" id="loginSenhaInput" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-submit" id="btnLoginSubmit">Entrar na Conta</button>
+      </form>
+
+      <!-- ABA 2: CRIAR CONTA (TITULAR) -->
+      <form id="formCadastTab" onsubmit="realizarCadastroSubmit(event)" style="display:none;">
+        <div class="form-group">
+          <label>Nome Completo</label>
+          <input type="text" class="form-control" id="cadNomeInput" placeholder="Ex: Maria Silva" required>
+        </div>
+        <div class="form-group">
+          <label>E-mail Principal</label>
+          <input type="email" class="form-control" id="cadEmailInput" placeholder="maria@exemplo.com" required>
+        </div>
+        <div class="form-group">
+          <label>WhatsApp / Telefone</label>
+          <input type="tel" class="form-control" id="cadTelInput" placeholder="(11) 99999-9999">
+        </div>
+        <div class="form-group">
+          <label>Crie sua Senha Forte</label>
+          <input type="password" class="form-control" id="cadSenhaInput" placeholder="••••••••" oninput="validarSenhaForte(this.value)" required>
+          <div class="pwd-checklist">
+            <div class="pwd-item" id="pwdMin"><span>•</span> Mínimo 8 caracteres</div>
+            <div class="pwd-item" id="pwdMai"><span>•</span> Letra maiúscula (A-Z)</div>
+            <div class="pwd-item" id="pwdMinu"><span>•</span> Letra minúscula (a-z)</div>
+            <div class="pwd-item" id="pwdNum"><span>•</span> Número (0-9)</div>
+            <div class="pwd-item" id="pwdSim"><span>•</span> Símbolo (@$!%*?&)</div>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit">Cadastrar e Acessar</button>
+      </form>
+
+      <!-- ABA 3: CADASTRO CONVIDADO -->
+      <form id="formConvidTab" onsubmit="realizarCadastroConvidadoSubmit(event)" style="display:none;">
+        <div class="form-group">
+          <label>Código do Convite (ID do Titular)</label>
+          <input type="text" class="form-control" id="convidIdTitularInput" placeholder="Ex: USR_fd45d63a" required>
+        </div>
+        <div class="form-group">
+          <label>Seu Nome Completo</label>
+          <input type="text" class="form-control" id="convidNomeInput" placeholder="Ex: João Souza" required>
+        </div>
+        <div class="form-group">
+          <label>Seu E-mail</label>
+          <input type="email" class="form-control" id="convidEmailInput" placeholder="joao@exemplo.com" required>
+        </div>
+        <div class="form-group">
+          <label>Sua Senha</label>
+          <input type="password" class="form-control" id="convidSenhaInput" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-submit">Ativar Acesso Convidado</button>
+      </form>
+
+      <p style="font-size: 0.7rem; color: #64748b; margin-top: 16px;">Desenvolvido por Bruno Shiguemoto © 2026</p>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO PRINCIPAL (EXIBIDO SOMENTE APÓS LOGIN AUTENTICADO) -->
+  <main class="main-content" id="mainContent" style="display:none;">
 
     <!-- CABEÇALHO & USER PROFILE -->
     <header class="app-header">
-      <div class="brand-wrapper" onclick="abrirModal('modalLogin')">
+      <div class="brand-wrapper" onclick="encerrarSessao()">
         <img src="finance_free_logo.png" alt="Finance Free Logo" class="brand-logo" onerror="this.style.display='none'">
         <div>
-          <h4 id="userNameDisplay">Bruno Shiguemoto</h4>
-          <span style="font-size: 0.72rem; color: #94a3b8;">Plano Familiar 🔑</span>
+          <h4 id="userNameDisplay">---</h4>
+          <span style="font-size: 0.72rem; color: #94a3b8;">Sessão Ativa 🔒 (Sair 🚪)</span>
         </div>
       </div>
       <div class="gamification-pill">
@@ -61,6 +142,7 @@
     <div class="app-view" id="viewReceitas">
       <div class="view-header">
         <h2>💰 Minhas Receitas</h2>
+        <span style="font-size: 0.78rem; color: #94a3b8;">Ordem decrescente de registro</span>
       </div>
       <div class="data-list" id="listaReceitasView"></div>
     </div>
@@ -69,137 +151,68 @@
     <div class="app-view" id="viewDespesas">
       <div class="view-header">
         <h2>💸 Minhas Despesas</h2>
+        <span style="font-size: 0.78rem; color: #94a3b8;">Ordem decrescente de registro</span>
       </div>
       <div class="data-list" id="listaDespesasView"></div>
     </div>
 
-    <!-- VIEW 4: CONTAS BANCÁRIAS -->
+    <!-- VIEW 4: CONTAS BANCÁRIAS E WALLET -->
     <div class="app-view" id="viewContas">
-      <div class="section-header-flex">
-        <h2>🏦 Contas Bancárias</h2>
+      <div class="view-header section-header-flex">
+        <h2>🏦 Contas Bancárias & Wallet</h2>
         <button class="btn-add-inline" onclick="abrirModal('modalConta')">+ Nova Conta</button>
       </div>
-      <div class="data-list" id="listaContasView" style="margin-top: 14px;"></div>
+      <div class="data-list" id="listaContasView"></div>
     </div>
 
     <!-- VIEW 5: CARTÕES DE CRÉDITO -->
     <div class="app-view" id="viewCartoes">
-      <div class="section-header-flex">
+      <div class="view-header section-header-flex">
         <h2>💳 Cartões de Crédito</h2>
         <button class="btn-add-inline" onclick="abrirModal('modalCartao')">+ Novo Cartão</button>
       </div>
-      <div class="data-list" id="listaCartoesView" style="margin-top: 14px;"></div>
+      <div class="data-list" id="listaCartoesView"></div>
     </div>
 
     <!-- VIEW 6: INVESTIMENTOS & PATRIMÔNIO -->
     <div class="app-view" id="viewInvestimentos">
-      <div class="view-header">
-        <h2>📈 Carteira de Investimentos & Patrimônio</h2>
+      <div class="view-header section-header-flex">
+        <h2>📈 Investimentos & Patrimônio</h2>
+        <button class="btn-add-inline" onclick="abrirModal('modalNovoInvestimento')">+ Novo Investimento</button>
       </div>
-
       <div class="summary-cards">
-        <div class="card">
-          <div class="card-title">Patrimônio Investido</div>
-          <div class="card-value value-receita" id="patrimonioTotalInvest">R$ 0,00</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Alinhamento de Carteira</div>
-          <div class="card-value" id="scoreInvestNumView" style="color: #8b5cf6;">90 pts</div>
+        <div class="card" style="grid-column: span 2;">
+          <div class="card-title">Patrimônio Investido Total</div>
+          <div class="card-value" id="totalPatrimonioInvest" style="color: #10b981; font-size: 1.5rem;">R$ 0,00</div>
         </div>
       </div>
-
       <section class="app-section">
-        <div class="section-title">DISTRIBUIÇÃO DE PATRIMÔNIO POR CATEGORIA</div>
+        <div class="section-title">DISTRIBUIÇÃO POR CATEGORIA DE ATIVO</div>
         <div class="chart-wrapper">
           <canvas id="investimentosChart"></canvas>
         </div>
       </section>
-
-      <section class="app-section">
-        <div class="section-header-flex">
-          <div class="section-title">MEUS ATIVOS DE INVESTIMENTO</div>
-          <button class="btn-add-inline" onclick="abrirModal('modalNovoInvestimento')">+ Novo Investimento</button>
-        </div>
-        <div class="data-list" id="listaInvestimentosView"></div>
-      </section>
+      <div class="data-list" id="listaInvestimentosView"></div>
     </div>
 
-  
-    <!-- VIEW 7: SAÚDE FINANCEIRA -->
+    <!-- VIEW 7: SAÚDE FINANCEIRA (BARRA COMPARATIVA) -->
     <div class="app-view" id="viewSaudeFinanceira">
-      <div class="view-header" style="margin-bottom: 20px;">
-        <h2 class="view-title">🩺 Saúde Financeira</h2>
-        <p class="view-subtitle" style="font-size: 0.85rem; color: #94a3b8;">Comparativo da distribuição real do seu orçamento x parâmetros ideais (50/30/10/10)</p>
+      <div class="view-header">
+        <h2>🩺 Saúde Financeira</h2>
+        <span style="font-size: 0.78rem; color: #94a3b8;">Comparativo Real x Meta Parametrizada (50/30/10/10)</span>
       </div>
-
-      <!-- SEÇÃO 1: GRÁFICO DE BARRAS COMPARATIVO -->
       <section class="app-section">
-        <div class="section-title">DISTRIBUIÇÃO DO ORÇAMENTO: REAL VS. META PARAMETRIZADA</div>
-        <div class="chart-wrapper" style="height: 280px; position: relative;">
-          <canvas id="saudeBarChart"></canvas>
+        <div class="section-title">DESTINAÇÃO DO ORÇAMENTO (%)</div>
+        <div class="chart-wrapper" style="height: 260px;">
+          <canvas id="saudeFinanceiraChart"></canvas>
         </div>
       </section>
-
-      <!-- SEÇÃO 2: QUADRO DE SAÚDE FINANCEIRA -->
-      <section class="app-section" style="margin-top: 24px;">
-        <div class="section-title">QUADRO DE SAÚDE FINANCEIRA</div>
-        
-        <div class="score-card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;">PONTUAÇÃO DA SAÚDE FINANCEIRA MENSAL</div>
-          <div class="score-number" id="scoreSaudeNum" style="font-size: 2.8rem; font-weight: 800; color: #10b981; margin: 8px 0;">85</div>
-          <div style="font-size: 0.85rem; color: #38bdf8;">Alvo Parametrizado: 50% Essenciais | 30% Investimentos | 10% Educação | 10% Estilo de Vida</div>
-        </div>
-
-        <div class="health-breakdown" style="background: rgba(30, 41, 59, 0.6); padding: 18px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="margin-bottom: 16px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #f8fafc;">
-              <span><strong>50% Despesas Essenciais:</strong> Moradia, Saúde, Alimentação</span>
-              <span id="txtEssenciais" style="color: #38bdf8; font-weight: 600;">52% (Ideal: 50%)</span>
-            </div>
-            <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
-              <div class="progress-bar-fill" id="barEssenciais" style="width: 52%; height: 100%; background: #38bdf8; border-radius: 4px; transition: width 0.4s ease;"></div>
-            </div>
-          </div>
-
-          <div style="margin-bottom: 16px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #f8fafc;">
-              <span><strong>30% Investimentos:</strong> Aportes e Formação de Patrimônio</span>
-              <span id="txtInvest" style="color: #10b981; font-weight: 600;">28% (Ideal: 30%)</span>
-            </div>
-            <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
-              <div class="progress-bar-fill" id="barInvest" style="width: 28%; height: 100%; background: #10b981; border-radius: 4px; transition: width 0.4s ease;"></div>
-            </div>
-          </div>
-
-          <div style="margin-bottom: 16px;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #f8fafc;">
-              <span><strong>10% Educação:</strong> Cursos, Treinamentos e Livros</span>
-              <span id="txtEduc" style="color: #f59e0b; font-weight: 600;">8% (Ideal: 10%)</span>
-            </div>
-            <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
-              <div class="progress-bar-fill" id="barEduc" style="width: 8%; height: 100%; background: #f59e0b; border-radius: 4px; transition: width 0.4s ease;"></div>
-            </div>
-          </div>
-
-          <div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #f8fafc;">
-              <span><strong>10% Estilo de Vida:</strong> Gastos Livres e Lazer</span>
-              <span id="txtLivre" style="color: #ec4899; font-weight: 600;">12% (Ideal: 10%)</span>
-            </div>
-            <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
-              <div class="progress-bar-fill" id="barLivre" style="width: 12%; height: 100%; background: #ec4899; border-radius: 4px; transition: width 0.4s ease;"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      
     </div>
 
   </main>
 
-  <!-- MENU LATERAL DIREITO (NEON RETRÁTIL / COEXISTENTE) -->
-  <aside class="sidebar-right" id="sidebarRight">
+  <!-- MENU LATERAL DIREITO RETRÁTIL -->
+  <aside class="sidebar-right" id="sidebarRight" style="display:none;">
     <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
     <nav class="sidebar-nav">
       <a class="sidebar-item active" onclick="navegarParaView('viewHome')">
@@ -223,16 +236,16 @@
       <a class="sidebar-item" onclick="navegarParaView('viewSaudeFinanceira')">
         <span class="sidebar-icon">🩺</span><span class="sidebar-label">Saúde Financeira</span>
       </a>
-      <a class="sidebar-item" onclick="abrirModal('modalLogin')">
-        <span class="sidebar-icon">🔑</span><span class="sidebar-label">Login / Perfil</span>
+      <a class="sidebar-item" onclick="encerrarSessao()">
+        <span class="sidebar-icon">🚪</span><span class="sidebar-label">Sair da Conta</span>
       </a>
     </nav>
   </aside>
 
-  <!-- BOTÃO FLUTUANTE DE (+) LANÇAMENTO RÁPIDO -->
-  <button class="btn-floating-add" onclick="abrirModal('modalLancamento')">+</button>
+  <!-- BOTÃO FLUTUANTE (+ CANTO INFERIOR ESQUERDO) -->
+  <button class="btn-floating-add" id="btnFloatingAdd" onclick="abrirModal('modalLancamento')" style="display:none;">+</button>
 
-  <!-- MODAL 1: LANÇAMENTO RÁPIDO (+) -->
+  <!-- MODAL: NOVO LANÇAMENTO (+) -->
   <div class="modal-overlay" id="modalLancamento">
     <div class="modal-card">
       <div class="modal-header">
@@ -250,7 +263,7 @@
 
         <div class="form-group">
           <label>Descrição</label>
-          <input type="text" class="form-control" id="inputDescricao" placeholder="Ex: Supermercado, Luz, Salário" required>
+          <input type="text" class="form-control" id="inputDescricao" placeholder="Ex: Mercado, Luz, Salário" required>
         </div>
 
         <div class="form-group">
@@ -258,7 +271,6 @@
           <input type="number" step="0.01" class="form-control" id="inputValor" placeholder="0.00" required>
         </div>
 
-        <!-- FORMA DE PAGAMENTO -->
         <div class="form-group" id="groupFormaPagamento">
           <label>Forma de Pagamento</label>
           <select class="form-control" id="selectFormaPagamento" onchange="toggleFormaPagamento()">
@@ -266,41 +278,31 @@
             <option value="Crédito">Cartão de Crédito 💳</option>
             <option value="Dinheiro">Dinheiro (Wallet) 💵</option>
             <option value="Pix">Pix ⚡</option>
-            <option value="Outro">Outro</option>
           </select>
         </div>
 
-        <!-- SELEÇÃO DE CARTÃO DE CRÉDITO (Exibido quando Crédito) -->
-        <div class="form-group" id="groupCartaoCredito" style="display:none;">
-          <label>Selecione o Cartão de Crédito</label>
-          <select class="form-control" id="selectCartaoDespesa"></select>
-          <small style="color: #94a3b8; font-size: 0.75rem; display:block; margin-top:4px;">
-            💳 O valor será subtraído do limite disponível do cartão de crédito selecionado.
-          </small>
+        <div class="form-group" id="groupContaBancaria">
+          <label id="labelContaBancaria">Conta / Wallet de Origem</label>
+          <select class="form-control" id="selectContaOrigem"></select>
         </div>
 
-        <!-- SELEÇÃO DE CONTA BANCÁRIA / WALLET (Exibido quando Débito, Dinheiro, Pix ou Receita) -->
-        <div class="form-group" id="groupContaBancaria">
-          <label id="labelContaBancaria">Conta Bancária / Carteira (Wallet)</label>
-          <select class="form-control" id="selectContaDespesa"></select>
-          <small style="color: #94a3b8; font-size: 0.75rem; display:block; margin-top:4px;">
-            🏦 O valor será debitado/creditado do saldo atual desta conta ou Wallet.
-          </small>
+        <div class="form-group" id="groupCartaoCredito" style="display:none;">
+          <label>Cartão de Crédito Utilizado</label>
+          <select class="form-control" id="selectCartaoOrigem"></select>
         </div>
 
         <div class="form-group" id="groupClassificacaoDespesa">
           <label>Classificação da Despesa</label>
           <select class="form-control" id="selectClassificacaoDespesa">
-            <option value="Moradia">Moradia (Aluguel, Luz, Água, Gás, Internet)</option>
-            <option value="Alimentação">Alimentação (Supermercado, Feira, Restaurantes)</option>
-            <option value="Transporte">Transporte (Combustível, Uber, Ônibus, IPVA)</option>
-            <option value="Saúde">Saúde & Bem-Estar (Plano, Farmácia, Consultas)</option>
-            <option value="Educação">Educação (Escola, Faculdade, Cursos, Livros)</option>
-            <option value="Lazer">Lazer & Entretenimento (Viagens, Cinema, Streaming)</option>
+            <option value="Moradia">Moradia (Aluguel, Luz, Água, Gás)</option>
+            <option value="Alimentação">Alimentação (Supermercado, Feira)</option>
+            <option value="Transporte">Transporte (Combustível, Uber)</option>
+            <option value="Saúde">Saúde & Bem-Estar</option>
+            <option value="Educação">Educação (Escola, Cursos)</option>
+            <option value="Lazer">Lazer & Entretenimento</option>
             <option value="Vestuário">Vestuário & Acessórios</option>
-            <option value="Cuidados Pessoais">Cuidados Pessoais (Salão, Barbearia, Cosméticos)</option>
-            <option value="Impostos">Impostos & Taxas Bancárias</option>
-            <option value="Dívidas">Dívidas & Financiamentos</option>
+            <option value="Cuidados Pessoais">Cuidados Pessoais</option>
+            <option value="Impostos">Impostos & Taxas</option>
             <option value="Outras Despesas">Outras Despesas</option>
           </select>
         </div>
@@ -312,9 +314,7 @@
             <option value="Renda Extra">Renda Extra / Freelance</option>
             <option value="Rendimentos">Rendimentos de Investimentos</option>
             <option value="Aluguéis">Aluguéis Recebidos</option>
-            <option value="13º Salário / Férias">13º Salário / Férias</option>
-            <option value="Reembolsos">Reembolsos & Restituições</option>
-            <option value="Presentes / Outros">Presentes & Outras Receitas</option>
+            <option value="Presentes / Outros">Presentes & Outros</option>
           </select>
         </div>
 
@@ -325,7 +325,7 @@
 
         <div class="form-group">
           <label>Observações / Justificativa</label>
-          <textarea class="form-control" id="inputObservacoes" rows="2" placeholder="Anote uma explicação para você e seu cônjuge..."></textarea>
+          <textarea class="form-control" id="inputObservacoes" rows="2" placeholder="Explicação do lançamento..."></textarea>
         </div>
 
         <button type="submit" class="btn-submit">Salvar Lançamento</button>
@@ -333,16 +333,16 @@
     </div>
   </div>
 
-  <!-- MODAL 2: CADASTRO DE CONTAS BANCÁRIAS -->
+  <!-- MODAL: CADASTRO DE CONTA BANCÁRIA -->
   <div class="modal-overlay" id="modalConta">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Cadastrar Conta Bancária</h3>
+        <h3 class="modal-title">Cadastrar Conta Bancária ou Wallet</h3>
         <button class="close-btn" onclick="fecharModal('modalConta')">✕</button>
       </div>
       <form onsubmit="salvarNovaConta(event)">
         <div class="form-group">
-          <label>Selecione o Banco</label>
+          <label>Selecione o Banco ou Wallet</label>
           <select class="form-control" id="selectBancoConta" required></select>
         </div>
         <div class="form-group">
@@ -362,7 +362,7 @@
     </div>
   </div>
 
-  <!-- MODAL 3: CADASTRO DE CARTÃO DE CRÉDITO -->
+  <!-- MODAL: CADASTRO DE CARTÃO DE CRÉDITO -->
   <div class="modal-overlay" id="modalCartao">
     <div class="modal-card">
       <div class="modal-header">
@@ -372,117 +372,64 @@
       <form onsubmit="salvarNovoCartao(event)">
         <div class="form-group">
           <label>Nome do Cartão</label>
-          <input type="text" class="form-control" id="inputNomeCartao" placeholder="Ex: Nubank Black, XP Visa Infinite" required>
+          <input type="text" class="form-control" id="inputNomeCartao" placeholder="Ex: Nubank Violeta" required>
         </div>
         <div class="form-group">
-          <label>Limite Total (R$)</label>
-          <input type="number" step="0.01" class="form-control" id="inputLimiteCartao" placeholder="0.00" required>
+          <label>Limite Total de Crédito (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="inputLimiteCartao" placeholder="5000.00" required>
         </div>
         <div class="form-group">
-          <label>Dia do Fechamento</label>
-          <input type="number" min="1" max="31" class="form-control" id="inputDiaFechamento" placeholder="Ex: 5">
+          <label>Dia do Fechamento da Fatura</label>
+          <input type="number" min="1" max="31" class="form-control" id="inputDiaFechamento" placeholder="5" required>
         </div>
         <div class="form-group">
-          <label>Dia do Vencimento</label>
-          <input type="number" min="1" max="31" class="form-control" id="inputDiaVencimento" placeholder="Ex: 12">
+          <label>Dia do Vencimento da Fatura</label>
+          <input type="number" min="1" max="31" class="form-control" id="inputDiaVencimento" placeholder="12" required>
         </div>
         <button type="submit" class="btn-submit">Cadastrar Cartão</button>
       </form>
     </div>
   </div>
 
-  <!-- MODAL 4: CADASTRO DE NOVO INVESTIMENTO -->
+  <!-- MODAL: NOVO INVESTIMENTO -->
   <div class="modal-overlay" id="modalNovoInvestimento">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Cadastrar Investimento</h3>
+        <h3 class="modal-title">📈 Cadastrar Investimento</h3>
         <button class="close-btn" onclick="fecharModal('modalNovoInvestimento')">✕</button>
       </div>
       <form onsubmit="salvarNovoInvestimento(event)">
         <div class="form-group">
-          <label>Tipo de Operação</label>
-          <select class="form-control" id="selectTipoInvestOp">
-            <option value="Saldo Inicial">Saldo Inicial 🏦</option>
-            <option value="Aquisição de Cotas">Aquisição de Cotas 📈</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Classificação do Investimento</label>
-          <select class="form-control" id="selectCategoriaInvest" required>
-            <option value="Ações">Ações</option>
-            <option value="FIIs">FIIs (Títulos / Fundos Imobiliários)</option>
-            <option value="Previdência Privada">Previdência Privada</option>
-            <option value="Crypto">Crypto (Criptomoedas)</option>
-            <option value="Ativos Internacionais">Ativos Internacionais</option>
-            <option value="Tesouro Direto">Tesouro Direto</option>
-          </select>
-        </div>
-
-        <div class="form-group">
           <label>Nome do Ativo / Código</label>
-          <input type="text" class="form-control" id="inputNomeAtivoInvest" placeholder="Ex: PETR4, HGLG11, BTC, AAPL, Tesouro Selic 2029" required>
+          <input type="text" class="form-control" id="inputNomeAtivo" placeholder="Ex: PETR4, HGLG11, Tesouro Selic" required>
         </div>
-
         <div class="form-group">
-          <label>Valor Total / Saldo (R$)</label>
-          <input type="number" step="0.01" class="form-control" id="inputValorInvest" placeholder="0.00" required>
+          <label>Categoria do Investimento</label>
+          <select class="form-control" id="selectCategoriaInvestimento">
+            <option value="Ações">Ações 📈</option>
+            <option value="FIIs">FIIs (Títulos Imobiliários) 🏢</option>
+            <option value="Previdência Privada">Previdência Privada 🛡️</option>
+            <option value="Crypto">Crypto (Criptomoedas) 🪙</option>
+            <option value="Ativos Internacionais">Ativos Internacionais 🌐</option>
+            <option value="Tesouro Direto">Tesouro Direto / Renda Fixa 🏛️</option>
+          </select>
         </div>
-
         <div class="form-group">
-          <label>Quantidade de Cotas / Ações (Opcional)</label>
-          <input type="number" step="0.000001" class="form-control" id="inputCotasInvest" placeholder="Ex: 10.5">
+          <label>Tipo de Operação</label>
+          <select class="form-control" id="selectTipoOperacaoInvest">
+            <option value="Saldo Inicial">Saldo Inicial (Carteira)</option>
+            <option value="Aquisição de Cotas">Aquisição de Cotas / Aporte</option>
+          </select>
         </div>
-
         <div class="form-group">
-          <label>Data da Operação</label>
-          <input type="date" class="form-control" id="inputDataInvest">
+          <label>Valor Total Aplicado (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="inputValorTotalInvest" placeholder="1000.00" required>
         </div>
-
         <div class="form-group">
-          <label>Observações / Anotações</label>
-          <textarea class="form-control" id="inputObsInvest" rows="2" placeholder="Ex: Aporte mensal estratégico para a carteira..."></textarea>
+          <label>Quantidade de Cotas / Títulos</label>
+          <input type="number" step="0.0001" class="form-control" id="inputQtdCotasInvest" placeholder="1">
         </div>
-
         <button type="submit" class="btn-submit">Salvar Investimento</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL 5: EDUCAÇÃO FINANCEIRA (50 / 30 / 10 / 10) -->
-  <div class="modal-overlay" id="modalEduca">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title">🎓 Educação Financeira</h3>
-        <button class="close-btn" onclick="fecharModal('modalEduca')">✕</button>
-      </div>
-      <div class="card" style="text-align: center; margin-bottom: 14px;">
-        <div style="font-size: 0.8rem; color: #94a3b8;">SAÚDE FINANCEIRA MENSAL</div>
-        <div id="scoreEducaNum" style="font-size: 2rem; font-weight: bold; color: #10b981;">85</div>
-        <div style="font-size: 0.8rem; color: #cbd5e1;">Regra Recomendada: 50/30/10/10</div>
-      </div>
-      <div style="font-size: 0.85rem; color: #cbd5e1;">
-        <p><strong>50% Essenciais:</strong> Moradia, Saúde, Alimentação.</p>
-        <p style="margin-top:8px;"><strong>30% Investimentos:</strong> Aportes de futuro.</p>
-        <p style="margin-top:8px;"><strong>10% Educação:</strong> Cursos e aprendizado.</p>
-        <p style="margin-top:8px;"><strong>10% Estilo de Vida:</strong> Lazer e lazer livre.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 6: LOGIN / REGISTRO DA SESSÃO -->
-  <div class="modal-overlay" id="modalLogin">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title">🔑 Acesso do Usuário</h3>
-        <button class="close-btn" onclick="fecharModal('modalLogin')">✕</button>
-      </div>
-      <form onsubmit="realizarLogin(event)">
-        <div class="form-group">
-          <label>Seu E-mail Cadastrado</label>
-          <input type="email" class="form-control" id="loginEmail" placeholder="seuemail@exemplo.com" required>
-        </div>
-        <button type="submit" class="btn-submit" id="btnLoginSubmit">Entrar na Conta</button>
       </form>
     </div>
   </div>
