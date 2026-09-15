@@ -124,6 +124,78 @@
       </section>
     </div>
 
+  
+    <!-- VIEW 7: SAÚDE FINANCEIRA -->
+    <div class="app-view" id="viewSaudeFinanceira">
+      <div class="view-header" style="margin-bottom: 20px;">
+        <h2 class="view-title">🩺 Saúde Financeira</h2>
+        <p class="view-subtitle" style="font-size: 0.85rem; color: #94a3b8;">Comparativo da distribuição real do seu orçamento x parâmetros ideais (50/30/10/10)</p>
+      </div>
+
+      <!-- SEÇÃO 1: GRÁFICO DE BARRAS COMPARATIVO -->
+      <section class="app-section">
+        <div class="section-title">DISTRIBUIÇÃO DO ORÇAMENTO: REAL VS. META PARAMETRIZADA</div>
+        <div class="chart-wrapper" style="height: 280px; position: relative;">
+          <canvas id="saudeBarChart"></canvas>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 2: QUADRO DE SAÚDE FINANCEIRA -->
+      <section class="app-section" style="margin-top: 24px;">
+        <div class="section-title">QUADRO DE SAÚDE FINANCEIRA</div>
+        
+        <div class="score-card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+          <div style="font-size: 0.82rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;">PONTUAÇÃO DA SAÚDE FINANCEIRA MENSAL</div>
+          <div class="score-number" id="scoreSaudeNum" style="font-size: 2.8rem; font-weight: 800; color: #10b981; margin: 8px 0;">85</div>
+          <div style="font-size: 0.85rem; color: #38bdf8;">Alvo Parametrizado: 50% Essenciais | 30% Investimentos | 10% Educação | 10% Estilo de Vida</div>
+        </div>
+
+        <div class="health-breakdown" style="background: rgba(30, 41, 59, 0.6); padding: 18px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #f8fafc;">
+              <span><strong>50% Despesas Essenciais:</strong> Moradia, Saúde, Alimentação</span>
+              <span id="txtEssenciais" style="color: #38bdf8; font-weight: 600;">52% (Ideal: 50%)</span>
+            </div>
+            <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+              <div class="progress-bar-fill" id="barEssenciais" style="width: 52%; height: 100%; background: #38bdf8; border-radius: 4px; transition: width 0.4s ease;"></div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #f8fafc;">
+              <span><strong>30% Investimentos:</strong> Aportes e Formação de Patrimônio</span>
+              <span id="txtInvest" style="color: #10b981; font-weight: 600;">28% (Ideal: 30%)</span>
+            </div>
+            <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+              <div class="progress-bar-fill" id="barInvest" style="width: 28%; height: 100%; background: #10b981; border-radius: 4px; transition: width 0.4s ease;"></div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #f8fafc;">
+              <span><strong>10% Educação:</strong> Cursos, Treinamentos e Livros</span>
+              <span id="txtEduc" style="color: #f59e0b; font-weight: 600;">8% (Ideal: 10%)</span>
+            </div>
+            <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+              <div class="progress-bar-fill" id="barEduc" style="width: 8%; height: 100%; background: #f59e0b; border-radius: 4px; transition: width 0.4s ease;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: #f8fafc;">
+              <span><strong>10% Estilo de Vida:</strong> Gastos Livres e Lazer</span>
+              <span id="txtLivre" style="color: #ec4899; font-weight: 600;">12% (Ideal: 10%)</span>
+            </div>
+            <div class="progress-bar-bg" style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+              <div class="progress-bar-fill" id="barLivre" style="width: 12%; height: 100%; background: #ec4899; border-radius: 4px; transition: width 0.4s ease;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <button class="btn-floating-add" onclick="abrirModal('modalLancamento')">+</button>
+    </div>
+
   </main>
 
   <!-- MENU LATERAL DIREITO (NEON RETRÁTIL / COEXISTENTE) -->
@@ -148,8 +220,8 @@
       <a class="sidebar-item" onclick="navegarParaView('viewInvestimentos')">
         <span class="sidebar-icon">📈</span><span class="sidebar-label">Investimentos</span>
       </a>
-      <a class="sidebar-item" onclick="abrirModal('modalEduca')">
-        <span class="sidebar-icon">🎓</span><span class="sidebar-label">Educação Financeira</span>
+      <a class="sidebar-item" onclick="navegarParaView('viewSaudeFinanceira')">
+        <span class="sidebar-icon">🩺</span><span class="sidebar-label">Saúde Financeira</span>
       </a>
       <a class="sidebar-item" onclick="abrirModal('modalLogin')">
         <span class="sidebar-icon">🔑</span><span class="sidebar-label">Login / Perfil</span>
