@@ -36,7 +36,10 @@
         </div>
         <div class="form-group">
           <label>Sua Senha</label>
-          <input type="password" class="form-control" id="loginSenhaInput" placeholder="••••••••" required>
+          <div class="password-input-wrapper">
+            <input type="password" class="form-control" id="loginSenhaInput" placeholder="••••••••" required>
+            <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('loginSenhaInput', this)" title="Mostrar Senha">👁️</button>
+          </div>
         </div>
         <button type="submit" class="btn-submit" id="btnLoginSubmit">Entrar na Conta</button>
       </form>
@@ -57,7 +60,10 @@
         </div>
         <div class="form-group">
           <label>Crie sua Senha Forte</label>
-          <input type="password" class="form-control" id="cadSenhaInput" placeholder="••••••••" oninput="validarSenhaForte(this.value)" required>
+          <div class="password-input-wrapper">
+            <input type="password" class="form-control" id="cadSenhaInput" placeholder="••••••••" oninput="validarSenhaForte(this.value)" required>
+            <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('cadSenhaInput', this)" title="Mostrar Senha">👁️</button>
+          </div>
           <div class="pwd-checklist">
             <div class="pwd-item" id="pwdMin"><span>•</span> Mínimo 8 caracteres</div>
             <div class="pwd-item" id="pwdMai"><span>•</span> Letra maiúscula (A-Z)</div>
@@ -85,7 +91,10 @@
         </div>
         <div class="form-group">
           <label>Sua Senha</label>
-          <input type="password" class="form-control" id="convidSenhaInput" placeholder="••••••••" required>
+          <div class="password-input-wrapper">
+            <input type="password" class="form-control" id="convidSenhaInput" placeholder="••••••••" required>
+            <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('convidSenhaInput', this)" title="Mostrar Senha">👁️</button>
+          </div>
         </div>
         <button type="submit" class="btn-submit">Ativar Acesso Convidado</button>
       </form>
@@ -464,5 +473,30 @@
   <!-- SCRIPTS -->
   <script src="bancos_brasil.js"></script>
   <script src="app.js"></script>
+
+  <!-- MODAL: CONVIDAR PARCEIRO (COMPARTILHAMENTO FAMILIAR) -->
+  <div class="modal-overlay" id="modalConvidarParceiro">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">🤝 Convidar Parceiro(a)</h3>
+        <button class="close-btn" onclick="fecharModal('modalConvidarParceiro')">✕</button>
+      </div>
+      <div style="font-size: 0.88rem; color: #cbd5e1; margin-bottom: 16px;">
+        <p style="margin-bottom: 8px;">Ao vincular a ID do seu parceiro(a) ou convidado(a), ambos visualizarão e controlarão o mesmo saldo, receitas, despesas e investimentos familiares em tempo real.</p>
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+          <span style="font-size: 0.78rem; color: #94a3b8; display: block;">SUA ID DE TITULAR:</span>
+          <strong id="displaySeuID" style="color: #10b981; font-size: 1.15rem; letter-spacing: 1px;">-</strong>
+        </div>
+      </div>
+      <form onsubmit="salvarVincularConvidado(event)">
+        <div class="form-group">
+          <label>ID ou E-mail do Convidado / Parceiro(a)</label>
+          <input type="text" class="form-control" id="inputIDConvidado" placeholder="Ex: GST_98765432 ou parceiro@email.com" required>
+        </div>
+        <button type="submit" class="btn-submit">Vincular e Compartilhar Conta</button>
+      </form>
+    </div>
+  </div>
+
 </body>
 </html>
