@@ -1,15 +1,14 @@
 <!-- ============================================================================
-     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 4.0
-     Arquivo: index.html
-     Descrição: Menu Lateral Neon Retrátil, Apenas Botão (+), Educação Financeira,
-                Investimentos, Login e Classificações da Economia Familiar.
+     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 5.0
+     Descrição: Logo Neon Minimalista, Autenticação por Email e Senha Forte, 
+                Cadastro de Usuários e Convidados com Isolamento de Dados.
      ============================================================================ -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Finance Free</title>
+  <title>Finance Free - por Bruno Shiguemoto</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -21,7 +20,7 @@
       <div class="avatar" id="userAvatar">BS</div>
       <div>
         <h4 id="userNameDisplay" style="font-size: 0.95rem;">Bruno Shiguemoto</h4>
-        <span style="font-size: 0.72rem; color: #94a3b8;">Plano Compartilhado 🔑</span>
+        <span id="userTypeBadge" style="font-size: 0.72rem; color: #10b981;">Plano Compartilhado 🔑</span>
       </div>
     </div>
     <div class="gamification-pill">
@@ -66,7 +65,7 @@
       <a class="sidebar-item" onclick="abrirModal('modalEmprestimo')"><span class="sidebar-icon">🤝</span><span class="sidebar-label">Empréstimos</span></a>
       <a class="sidebar-item" onclick="abrirModal('modalEduca')"><span class="sidebar-icon">🎓</span><span class="sidebar-label">Educação Financeira</span></a>
       <a class="sidebar-item" onclick="abrirModal('modalInvest')"><span class="sidebar-icon">📈</span><span class="sidebar-label">Investimentos</span></a>
-      <a class="sidebar-item" onclick="abrirModal('modalLogin')"><span class="sidebar-icon">🔑</span><span class="sidebar-label">Login / Perfil</span></a>
+      <a class="sidebar-item" onclick="abrirModal('modalLogin')"><span class="sidebar-icon">🔑</span><span class="sidebar-label">Login / Cadastro</span></a>
     </nav>
   </aside>
 
@@ -135,8 +134,8 @@
         </div>
 
         <div class="form-group">
-          <label>Observações / Justificativa</label>
-          <textarea class="form-control" id="inputObservacoes" rows="2" placeholder="Anote uma explicação para você e seu cônjuge..."></textarea>
+          <label>Observações / Justificativa (Visível ao casal)</label>
+          <textarea class="form-control" id="inputObservacoes" rows="2" placeholder="Anote uma explicação do lançamento..."></textarea>
         </div>
 
         <button type="submit" class="btn-submit">Salvar Lançamento</button>
@@ -144,7 +143,7 @@
     </div>
   </div>
 
-  <!-- MODAL 2: CADASTRO DE CONTAS BANCÁRIAS -->
+  <!-- MODAL 2: CONTAS BANCARIAS -->
   <div class="modal-overlay" id="modalConta">
     <div class="modal-card">
       <div class="modal-header">
@@ -173,7 +172,7 @@
     </div>
   </div>
 
-  <!-- MODAL 3: EDUCAÇÃO FINANCEIRA (50 / 30 / 10 / 10) -->
+  <!-- MODAL 3: EDUCAÇÃO FINANCEIRA (50/30/10/10) -->
   <div class="modal-overlay" id="modalEduca">
     <div class="modal-card">
       <div class="modal-header">
@@ -184,19 +183,18 @@
       <div class="score-card">
         <div style="font-size: 0.82rem; color: #94a3b8;">SAÚDE FINANCEIRA MENSAL</div>
         <div class="score-number" id="scoreEducaNum">85</div>
-        <div style="font-size: 0.85rem; color: #10b981;">Meta Recomendada: 50/30/10/10</div>
+        <div style="font-size: 0.85rem; color: #10b981;">Regra Recomendada: 50/30/10/10</div>
       </div>
 
-      <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 12px;">
+      <div style="font-size: 0.85rem; color: #cbd5e1;">
         <p><strong>50% Despesas Essenciais:</strong> Moradia, Saúde, Alimentação.</p>
         <div class="progress-bar-bg"><div class="progress-bar-fill" id="barEssenciais" style="width: 52%;"></div></div>
 
-        <p style="margin-top:10px;"><strong>30% Investimentos & Futuro:</strong> Aportes ativos.</p>
+        <p style="margin-top:10px;"><strong>30% Investimentos:</strong> Aportes em Ações, FIIs e Tesouro.</p>
         <div class="progress-bar-bg"><div class="progress-bar-fill" id="barInvest" style="width: 28%;"></div></div>
 
-        <p style="margin-top:10px;"><strong>10% Educação & Crescimento:</strong> Cursos e livros.</p>
-
-        <p style="margin-top:10px;"><strong>10% Gastos Livres:</strong> Lazer e estilo de vida.</p>
+        <p style="margin-top:10px;"><strong>10% Educação:</strong> Cursos, Treinamentos e Livros.</p>
+        <p style="margin-top:10px;"><strong>10% Gastos Livres:</strong> Lazer e Estilo de vida.</p>
       </div>
     </div>
   </div>
@@ -217,20 +215,89 @@
     </div>
   </div>
 
-  <!-- MODAL 5: LOGIN / SESSÃO -->
+  <!-- MODAL 5: AUTENTICAÇÃO, LOGIN E CADASTRO (COM LOGO NEON ILUMINADA) -->
   <div class="modal-overlay" id="modalLogin">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title">🔑 Acesso do Usuário</h3>
+    <div class="modal-card login-card-custom">
+      <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
         <button class="close-btn" onclick="fecharModal('modalLogin')">✕</button>
       </div>
-      <form onsubmit="realizarLogin(event)">
+      
+      <!-- LOGO NEON EM DESTAQUE -->
+      <div class="logo-container">
+        <img src="finance_free_logo.png" alt="Finance-Free por Bruno Shiguemoto" class="neon-logo-img">
+      </div>
+
+      <!-- ABAS: ENTRAR x CADASTRAR-SE -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabEntrar" onclick="switchAuthTab('login')">Entrar</button>
+        <button class="auth-tab" id="tabCadastrar" onclick="switchAuthTab('register')">Criar Conta</button>
+        <button class="auth-tab" id="tabConvidado" onclick="switchAuthTab('guest')">Sou Convidado</button>
+      </div>
+
+      <!-- FORMULARIO DE LOGIN -->
+      <form id="formLogin" onsubmit="realizarLogin(event)">
         <div class="form-group">
-          <label>Seu E-mail Cadastrado</label>
+          <label>E-mail</label>
           <input type="email" class="form-control" id="loginEmail" placeholder="seuemail@exemplo.com" required>
         </div>
-        <button type="submit" class="btn-submit">Entrar na Conta</button>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" class="form-control" id="loginSenha" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-submit" id="btnLoginSubmit">Entrar no Finance Free</button>
       </form>
+
+      <!-- FORMULARIO DE NOVO CADASTRO (TITULAR) -->
+      <form id="formRegister" onsubmit="realizarCadastro(event)" style="display: none;">
+        <div class="form-group">
+          <label>Nome Completo</label>
+          <input type="text" class="form-control" id="regNome" placeholder="Seu nome completo" required>
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" class="form-control" id="regEmail" placeholder="seuemail@exemplo.com" required>
+        </div>
+        <div class="form-group">
+          <label>Telefone / WhatsApp</label>
+          <input type="text" class="form-control" id="regTelefone" placeholder="(47) 99999-9999" required>
+        </div>
+        <div class="form-group">
+          <label>Senha Forte (Mínimo 8 caracteres)</label>
+          <input type="password" class="form-control" id="regSenha" oninput="validarSenhaForte()" placeholder="Ex: Abc@1234" required>
+          
+          <!-- INDICADOR DE VALIDAÇÃO DE SENHA -->
+          <div class="password-checklist">
+            <span id="chkLength" class="chk-item">❌ 8+ caracteres</span>
+            <span id="chkUpper" class="chk-item">❌ Letra maiúscula</span>
+            <span id="chkLower" class="chk-item">❌ Letra minúscula</span>
+            <span id="chkNum" class="chk-item">❌ Número</span>
+            <span id="chkSymbol" class="chk-item">❌ Símbolo (@$!%*?&)</span>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit" id="btnRegisterSubmit" disabled style="opacity: 0.5;">Finalizar Cadastro</button>
+      </form>
+
+      <!-- FORMULARIO DE CONVIDADO (PRIMEIRO ACESSO VIA CONVITE) -->
+      <form id="formGuest" onsubmit="realizarCadastroConvidado(event)" style="display: none;">
+        <div class="form-group">
+          <label>Código do Convite do Titular</label>
+          <input type="text" class="form-control" id="guestInviteCode" placeholder="Ex: fd45d63a" required>
+        </div>
+        <div class="form-group">
+          <label>Seu Nome Completo</label>
+          <input type="text" class="form-control" id="guestNome" placeholder="Seu nome" required>
+        </div>
+        <div class="form-group">
+          <label>Seu E-mail</label>
+          <input type="email" class="form-control" id="guestEmail" placeholder="seuemail@exemplo.com" required>
+        </div>
+        <div class="form-group">
+          <label>Crie sua Senha de Acesso</label>
+          <input type="password" class="form-control" id="guestSenha" placeholder="Mínimo 8 caracteres" required>
+        </div>
+        <button type="submit" class="btn-submit">Ativar Acesso de Convidado</button>
+      </form>
+
     </div>
   </div>
 
