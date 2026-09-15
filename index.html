@@ -1,5 +1,5 @@
 <!-- ============================================================================
-     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 13.0 (ESPECIALISTA)
+     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 15.0 (ESPECIALISTA)
      Arquivo: index.html
      Descrição: Tela de Autenticação Rígida com Abas de Login, Cadastro de Titular,
                 Convidado (com ID_Titular) e Criptografia Total dos Dados.
@@ -160,9 +160,14 @@
     <div class="app-view" id="viewContas">
       <div class="view-header section-header-flex">
         <h2>🏦 Contas Bancárias & Wallet</h2>
-        <button class="btn-add-inline" onclick="abrirModal('modalConta')">+ Nova Conta</button>
+        <button class="btn-add-inline" onclick="abrirModal('modalConta')">+ Adicionar Conta Bancária</button>
       </div>
       <div class="data-list" id="listaContasView"></div>
+      <div style="margin-top: 24px; text-align: center;">
+        <button class="btn-submit" style="max-width: 320px; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px;" onclick="abrirModal('modalConta')">
+          ➕ Adicionar Nova Conta Bancária
+        </button>
+      </div>
     </div>
 
     <!-- VIEW 5: CARTÕES DE CRÉDITO -->
@@ -343,7 +348,29 @@
       <form onsubmit="salvarNovaConta(event)">
         <div class="form-group">
           <label>Selecione o Banco ou Wallet</label>
-          <select class="form-control" id="selectBancoConta" required></select>
+          <select class="form-control" id="selectBancoConta" required>
+            <option value="">-- Selecione o Banco --</option>
+            <option value="000 - Wallet (Dinheiro Físico / Carteira)">000 - Wallet (Dinheiro Físico / Carteira)</option>
+            <option value="001 - Banco do Brasil S.A.">001 - Banco do Brasil S.A.</option>
+            <option value="033 - Banco Santander (Brasil) S.A.">033 - Banco Santander (Brasil) S.A.</option>
+            <option value="104 - Caixa Econômica Federal">104 - Caixa Econômica Federal</option>
+            <option value="237 - Banco Bradesco S.A.">237 - Banco Bradesco S.A.</option>
+            <option value="341 - Itaú Unibanco S.A.">341 - Itaú Unibanco S.A.</option>
+            <option value="077 - Banco Inter S.A.">077 - Banco Inter S.A.</option>
+            <option value="260 - Nu Pagamentos S.A. (Nubank)">260 - Nu Pagamentos S.A. (Nubank)</option>
+            <option value="336 - Banco C6 S.A.">336 - Banco C6 S.A.</option>
+            <option value="212 - Banco Original S.A.">212 - Banco Original S.A.</option>
+            <option value="422 - Banco Safra S.A.">422 - Banco Safra S.A.</option>
+            <option value="655 - Banco Neon S.A.">655 - Banco Neon S.A.</option>
+            <option value="041 - Banco Banrisul S.A.">041 - Banco Banrisul S.A.</option>
+            <option value="756 - SICOOB">756 - SICOOB</option>
+            <option value="748 - SICREDI S.A.">748 - SICREDI S.A.</option>
+            <option value="637 - Banco BTG Pactual S.A.">637 - Banco BTG Pactual S.A.</option>
+            <option value="389 - Banco Mercantil do Brasil S.A.">389 - Banco Mercantil do Brasil S.A.</option>
+            <option value="070 - BRB - Banco de Brasília S.A.">070 - BRB - Banco de Brasília S.A.</option>
+            <option value="136 - Unicred Cooperativa">136 - Unicred Cooperativa</option>
+            <option value="999 - Outra Instituição Financeira">999 - Outra Instituição Financeira</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Agência</label>
