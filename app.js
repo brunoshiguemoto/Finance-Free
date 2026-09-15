@@ -4,7 +4,7 @@
 // Descrição: Gerenciamento de Estado, Modais Interativos, API e Fallback Local
 // ============================================================================
 
-const API_URL = "SUA_URL_DO_GOOGLE_APPS_SCRIPT_DEPLOY_AQUI"; // Inserir Web App URL
+const API_URL = "https://script.google.com/macros/s/AKfycbzmHwl89lV7YvXkbGGEeknW1KX9dv_bWf4T0r9fVIwgFSPzNxCdJipYfuQUaK32rYp79Q/exec"; // Inserir Web App URL
 const CURRENT_USER_ID = "fd45d63a";
 
 let currentMonthDate = new Date();
