@@ -1,5 +1,5 @@
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 33.0
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 34.0
 // Arquivo: app.js
 // Descrição: Suporte total a tratamento de moedas ("R$ 100,00"), gráfico de barras
 //            horizontais (Resumo Orçamentário), menu Tipo_Gasto com vínculo automático
@@ -14,7 +14,7 @@ let despesasChartInstance = null;
 let resumoBarrasChartInstance = null;
 let saudeChartInstance = null;
 
-console.log("🚀 Finance Free Frontend v33.0 Inicializado!");
+console.log("🚀 Finance Free Frontend v29.0 Inicializado!");
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
