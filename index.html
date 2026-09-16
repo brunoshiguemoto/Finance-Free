@@ -1,5 +1,5 @@
 <!-- ============================================================================
-     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 30.0 (ESPECIALISTA)
+     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 15.0 (ESPECIALISTA)
      Arquivo: index.html
      Descrição: Tela de Autenticação Rígida com Abas de Login, Cadastro de Titular,
                 Convidado (com ID_Titular) e Criptografia Total dos Dados.
@@ -506,30 +506,33 @@
         <div class="form-group">
           <label>Categoria do Investimento</label>
           <select class="form-control" id="selectCategoriaInvestimento">
+            <option value="Tesouro Direto">Tesouro Direto / Renda Fixa 🏛️</option>
             <option value="Ações">Ações 📈</option>
-            <option value="FIIs">FIIs (Títulos Imobiliários) 🏢</option>
+            <option value="FIIs">FIIs (Fundos Imobiliários) 🏢</option>
             <option value="Previdência Privada">Previdência Privada 🛡️</option>
             <option value="Crypto">Crypto (Criptomoedas) 🪙</option>
             <option value="Ativos Internacionais">Ativos Internacionais 🌐</option>
-            <option value="Tesouro Direto">Tesouro Direto / Renda Fixa 🏛️</option>
+            <option value="Outros Investimentos">Outros Investimentos 💰</option>
           </select>
         </div>
         <div class="form-group">
           <label>Tipo de Operação</label>
-          <select class="form-control" id="selectTipoOperacaoInvest">
-            <option value="Saldo Inicial">Saldo Inicial (Carteira)</option>
-            <option value="Aquisição de Cotas">Aquisição de Cotas / Aporte</option>
+          <select class="form-control" id="selectTipoOperacaoInvest" onchange="toggleTipoOperacaoInvestimento()">
+            <option value="Saldo Inicial">Saldo Inicial (Carteira Atual)</option>
+            <option value="Aporte / Aquisição">Aporte / Aquisição (Debita de Conta)</option>
+            <option value="Rendimento / Valorização">Rendimento / Provento / Valorização (Aumenta Patrimônio)</option>
+            <option value="Resgate">Resgate (Credita em Conta)</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Valor Total Aplicado (R$)</label>
-          <input type="number" step="0.01" class="form-control" id="inputValorTotalInvest" placeholder="1000.00" required>
+          <label>Valor (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="inputValorTotalInvest" placeholder="0.00" required>
         </div>
-        <div class="form-group">
-          <label>Quantidade de Cotas / Títulos</label>
-          <input type="number" step="0.0001" class="form-control" id="inputQtdCotasInvest" placeholder="1">
+        <div class="form-group" id="groupContaInvestimento">
+          <label id="labelContaInvestimento">Conta Bancária / Wallet de Origem</label>
+          <select class="form-control" id="selectContaInvestimento"></select>
         </div>
-        <button type="submit" class="btn-submit">Salvar Investimento</button>
+        <button type="submit" class="btn-submit" id="btnSalvarInvestimento">Salvar Investimento</button>
       </form>
     </div>
   </div>
