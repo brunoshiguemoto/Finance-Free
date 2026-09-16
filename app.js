@@ -1,5 +1,5 @@
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 29.0
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 30.0
 // Arquivo: app.js
 // Descrição: Suporte total a tratamento de moedas ("R$ 100,00"), gráfico de barras
 //            horizontais (Resumo Orçamentário), menu Tipo_Gasto com vínculo automático
@@ -886,19 +886,28 @@ function toggleFormaPagamento() {
 function toggleTipoLancamento() {
   const tipo = document.getElementById("tipoLancamento").value;
   const groupPagamento = document.getElementById("groupFormaPagamento");
+  const groupConta = document.getElementById("groupContaBancaria");
+  const groupCartao = document.getElementById("groupCartaoCredito");
+  const labelConta = document.getElementById("labelContaBancaria");
   const groupClassifDesp = document.getElementById("groupClassificacaoDespesa");
   const groupClassifRec = document.getElementById("groupClassificacaoReceita");
   const groupTipoGasto = document.getElementById("groupTipoGasto");
 
   if (tipo === "Despesa") {
-    groupPagamento.style.display = "block";
-    groupClassifDesp.style.display = "block";
-    groupClassifRec.style.display = "none";
+    if (groupPagamento) groupPagamento.style.display = "block";
+    if (labelConta) labelConta.textContent = "Conta / Wallet de Origem";
+    if (groupClassifDesp) groupClassifDesp.style.display = "block";
+    if (groupClassifRec) groupClassifRec.style.display = "none";
     if (groupTipoGasto) groupTipoGasto.style.display = "block";
+    toggleFormaPagamento();
   } else {
-    groupPagamento.style.display = "none";
-    groupClassifDesp.style.display = "none";
-    groupClassifRec.style.display = "block";
+    // RECEITA: Sem forma de pagamento, apenas Conta Destino
+    if (groupPagamento) groupPagamento.style.display = "none";
+    if (groupConta) groupConta.style.display = "block";
+    if (groupCartao) groupCartao.style.display = "none";
+    if (labelConta) labelConta.textContent = "Conta Destino";
+    if (groupClassifDesp) groupClassifDesp.style.display = "none";
+    if (groupClassifRec) groupClassifRec.style.display = "block";
     if (groupTipoGasto) groupTipoGasto.style.display = "none";
   }
 }
