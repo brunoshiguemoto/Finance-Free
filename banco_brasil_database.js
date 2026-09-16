@@ -1,3 +1,7 @@
+// ============================================================================
+// FINANCE FREE - BANCO DE DADOS DE BANCOS BRASILEIROS - VERSÃO 37.0
+// Arquivo: bancos_brasil.js
+// ============================================================================
 const BANCOS_BRASIL = [
   { codigo: "000", nome: "Wallet (Dinheiro Físico / Carteira)" },
   { codigo: "001", nome: "Banco do Brasil S.A." },
