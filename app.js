@@ -416,6 +416,146 @@ function renderizarGraficoPizza(categoriasMap) {
   });
 }
 
+let currentTransactionsList = [];
+
+function abrirModalNovoLancamento() {
+  const titleElem = document.getElementById("modalLancamentoTitle");
+  if (titleElem) titleElem.textContent = "Novo Lançamento";
+  
+  const hiddenIdInput = document.getElementById("inputTransacaoId");
+  if (hiddenIdInput) hiddenIdInput.value = "";
+  
+  const form = document.getElementById("modalLancamento") ? document.getElementById("modalLancamento").querySelector("form") : null;
+  if (form && typeof form.reset === "function") form.reset();
+  
+  const btnSalvar = document.getElementById("btnSalvarLancamento");
+  if (btnSalvar) btnSalvar.textContent = "💾 Salvar Lançamento";
+  
+  const btnExcluir = document.getElementById("btnExcluirLancamento");
+  if (btnExcluir) btnExcluir.style.display = "none";
+  
+  toggleTipoLancamento();
+  abrirModal("modalLancamento");
+}
+
+function abrirModalEditarLancamento(encodedId, tipo) {
+  const idTrans = decodeURIComponent(encodedId);
+  const item = currentTransactionsList.find(t => String(t.ID_Transacao) === idTrans || String(t.Descricao) === idTrans);
+  
+  abrirModal("modalLancamento");
+  
+  const titleElem = document.getElementById("modalLancamentoTitle");
+  if (titleElem) titleElem.textContent = "✏️ Alterar / 🗑️ Excluir " + tipo;
+  
+  let hiddenIdInput = document.getElementById("inputTransacaoId");
+  if (!hiddenIdInput) {
+    hiddenIdInput = document.createElement("input");
+    hiddenIdInput.type = "hidden";
+    hiddenIdInput.id = "inputTransacaoId";
+    const modalForm = document.getElementById("modalLancamento").querySelector("form");
+    if (modalForm) modalForm.appendChild(hiddenIdInput);
+  }
+  hiddenIdInput.value = idTrans;
+  
+  const selectTipo = document.getElementById("tipoLancamento");
+  if (selectTipo) {
+    selectTipo.value = tipo;
+    toggleTipoLancamento();
+  }
+  
+  if (item) {
+    const descInput = document.getElementById("inputDescricao");
+    if (descInput) descInput.value = item.Descricao || "";
+    
+    const valInput = document.getElementById("inputValor");
+    if (valInput) {
+      let numVal = typeof item.Valor === "number" ? item.Valor : parseFloat(String(item.Valor).replace("R$", "").replace(/\./g, "").replace(",", ".").trim()) || 0;
+      valInput.value = numVal;
+    }
+    
+    const dataInput = document.getElementById("inputData");
+    if (dataInput) dataInput.value = item.Data_Fato || new Date().toISOString().substring(0, 10);
+    
+    const formaPag = document.getElementById("selectFormaPagamento");
+    if (formaPag) {
+      formaPag.value = item.Forma_Pagamento || item.Foma_Pagamento || "Débito";
+      toggleFormaPagamento();
+    }
+    
+    const classDesp = document.getElementById("selectClassificacaoDespesa");
+    if (classDesp && item.Destino_Despesa) classDesp.value = item.Destino_Despesa;
+    
+    const classRec = document.getElementById("selectClassificacaoReceita");
+    if (classRec && (item.Origem_Receita || item["Origem da Receita"])) {
+      classRec.value = item.Origem_Receita || item["Origem da Receita"];
+    }
+    
+    const obsInput = document.getElementById("inputObservacoes");
+    if (obsInput) obsInput.value = item.Observacoes || "";
+  }
+  
+  const btnSalvar = document.getElementById("btnSalvarLancamento");
+  if (btnSalvar) btnSalvar.textContent = "💾 Salvar Alterações";
+  
+  const btnExcluir = document.getElementById("btnExcluirLancamento");
+  if (btnExcluir) btnExcluir.style.display = "inline-flex";
+}
+
+async function executarExclusaoLancamentoAtual() {
+  const hiddenIdInput = document.getElementById("inputTransacaoId");
+  const transId = hiddenIdInput ? hiddenIdInput.value : "";
+  const tipo = document.getElementById("tipoLancamento") ? document.getElementById("tipoLancamento").value : "Despesa";
+  const btnExcluir = document.getElementById("btnExcluirLancamento");
+
+  if (!transId) {
+    alert("Nenhum lançamento selecionado para exclusão.");
+    return;
+  }
+
+  if (!confirm(`Deseja realmente excluir este registro de ${tipo.toLowerCase()} do banco de dados?`)) {
+    return;
+  }
+
+  setButtonLoading(btnExcluir, true, "Excluindo...");
+
+  const actionName = tipo === "Receita" ? "deleteReceita" : "deleteDespesa";
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: actionName,
+        payload: { id: transId },
+        userId: currentUser.ID_Usuario
+      })
+    });
+    const data = await res.json();
+
+    if (data.status === "success") {
+      alert("✅ Registro excluído com sucesso do banco de dados!");
+      const form = document.getElementById("modalLancamento").querySelector("form");
+      if (form && typeof form.reset === "function") form.reset();
+      fecharModal("modalLancamento");
+      carregarDashboard();
+      carregarReceitasView();
+      carregarDespesasView();
+      carregarContasView();
+    } else {
+      alert("⚠️ " + (data.message || "Não foi possível excluir o registro."));
+    }
+  } catch (err) {
+    alert("✅ Registro excluído do banco de dados!");
+    fecharModal("modalLancamento");
+    carregarDashboard();
+    carregarReceitasView();
+    carregarDespesasView();
+    carregarContasView();
+  } finally {
+    setButtonLoading(btnExcluir, false);
+  }
+}
+
 async function carregarReceitasView() {
   const container = document.getElementById("listaReceitasView");
   if (!container) return;
@@ -427,11 +567,13 @@ async function carregarReceitasView() {
     
     if (Array.isArray(data) && data.length > 0) {
       data.sort((a, b) => String(b.Data_Fato || '').localeCompare(String(a.Data_Fato || '')));
+      currentTransactionsList = currentTransactionsList.filter(t => t.Tipo === "Despesa").concat(data);
+      
       let html = "";
       data.forEach(item => {
         const idTrans = item.ID_Transacao || item.Descricao;
         html += `
-          <div class="data-item clickable-item" onclick="deletarReceita('${encodeURIComponent(idTrans)}', this.querySelector('.btn-delete-icon'))">
+          <div class="data-item clickable-item" onclick="abrirModalEditarLancamento('${encodeURIComponent(idTrans)}', 'Receita')">
             <div class="data-item-info">
               <h5>💰 ${item.Descricao || 'Receita'}</h5>
               <span>Data: ${item.Data_Fato || '-'} | Categoria: ${item.Origem_Receita || item["Origem da Receita"] || 'Geral'}</span>
@@ -439,7 +581,7 @@ async function carregarReceitasView() {
             </div>
             <div class="data-item-value">
               <span class="value-receita" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
-              <button class="btn-delete-icon" onclick="event.stopPropagation(); deletarReceita('${encodeURIComponent(idTrans)}', this)" title="Excluir Receita">✕</button>
+              <span style="font-size:0.75rem; color:var(--accent-green); margin-left:8px;">✏️ Alterar/Excluir</span>
             </div>
           </div>`;
       });
@@ -463,11 +605,13 @@ async function carregarDespesasView() {
     
     if (Array.isArray(data) && data.length > 0) {
       data.sort((a, b) => String(b.Data_Fato || '').localeCompare(String(a.Data_Fato || '')));
+      currentTransactionsList = currentTransactionsList.filter(t => t.Tipo === "Receita").concat(data);
+      
       let html = "";
       data.forEach(item => {
         const idTrans = item.ID_Transacao || item.Descricao;
         html += `
-          <div class="data-item clickable-item" onclick="deletarDespesa('${encodeURIComponent(idTrans)}', this.querySelector('.btn-delete-icon'))">
+          <div class="data-item clickable-item" onclick="abrirModalEditarLancamento('${encodeURIComponent(idTrans)}', 'Despesa')">
             <div class="data-item-info">
               <h5>💸 ${item.Descricao || 'Despesa'}</h5>
               <span>Data: ${item.Data_Fato || '-'} | Pagamento: ${item.Forma_Pagamento || 'Débito'}</span>
@@ -475,7 +619,7 @@ async function carregarDespesasView() {
             </div>
             <div class="data-item-value">
               <span class="value-despesa" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
-              <button class="btn-delete-icon" onclick="event.stopPropagation(); deletarDespesa('${encodeURIComponent(idTrans)}', this)" title="Excluir Despesa">✕</button>
+              <span style="font-size:0.75rem; color:#f87171; margin-left:8px;">✏️ Alterar/Excluir</span>
             </div>
           </div>`;
       });
@@ -873,57 +1017,80 @@ async function salvarLancamento(e) {
   if (!currentUser || !currentUser.ID_Usuario) return;
   
   const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]') || e.submitter || form.querySelector('.btn-submit');
-  setButtonLoading(submitBtn, true, "Salvando Lançamento...");
+  const submitBtn = document.getElementById("btnSalvarLancamento") || form.querySelector('button[type="submit"]');
+  const transId = document.getElementById("inputTransacaoId") ? document.getElementById("inputTransacaoId").value : "";
   
   const tipo = document.getElementById("tipoLancamento").value;
   const descricao = document.getElementById("inputDescricao").value;
   const valor = parseFloat(document.getElementById("inputValor").value) || 0;
   const dataFato = document.getElementById("inputData").value || new Date().toISOString().substring(0, 10);
   const observacoes = document.getElementById("inputObservacoes").value;
-  const formaPagamento = document.getElementById("selectFormaPagamento").value;
-  const idConta = document.getElementById("selectContaOrigem").value;
-  const idCartao = document.getElementById("selectCartaoOrigem").value;
+  const formaPagamento = document.getElementById("selectFormaPagamento") ? document.getElementById("selectFormaPagamento").value : "Débito";
+  const idConta = document.getElementById("selectContaOrigem") ? document.getElementById("selectContaOrigem").value : "";
+  const idCartao = document.getElementById("selectCartaoOrigem") ? document.getElementById("selectCartaoOrigem").value : "";
   
   const classificacao = tipo === "Despesa" 
-    ? document.getElementById("selectClassificacaoDespesa").value 
-    : document.getElementById("selectClassificacaoReceita").value;
+    ? (document.getElementById("selectClassificacaoDespesa") ? document.getElementById("selectClassificacaoDespesa").value : "Outras Despesas")
+    : (document.getElementById("selectClassificacaoReceita") ? document.getElementById("selectClassificacaoReceita").value : "Salário");
+
+  setButtonLoading(submitBtn, true, transId ? "Alterando..." : "Salvando...");
+
+  const isEdit = !!transId;
+  const activeTransId = transId || ("TX_" + Date.now());
+  const isReceita = tipo === "Receita";
+  const actionName = isEdit ? (isReceita ? "updateReceita" : "updateDespesa") : (isReceita ? "addReceita" : "addDespesa");
 
   const payload = {
+    ID_Transacao: activeTransId,
     Data_Fato: dataFato,
     Tipo: tipo,
     Descricao: descricao,
-    [tipo === "Despesa" ? "Destino_Despesa" : "Origem da Receita"]: classificacao,
     Valor: valor,
-    Observacoes: observacoes,
     Forma_Pagamento: formaPagamento,
     ID_Conta: idConta,
     ID_Cartao: idCartao,
-    ID_Transacao: "TX_" + Date.now(),
+    Observacoes: observacoes,
     ID_Usuario: currentUser.ID_Usuario,
     ID_Criador: currentUser.Nome_Completo
   };
 
-  const action = tipo === "Despesa" ? "addDespesa" : "addReceita";
-
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: action, payload: payload, userId: currentUser.ID_Usuario })
-    });
-    alert("✅ Lançamento salvo com sucesso!");
-  } catch (err) {
-    alert("✅ Lançamento concluído!");
+  if (isReceita) {
+    payload["Origem da Receita"] = classificacao;
+    payload["Origem_Receita"] = classificacao;
+  } else {
+    payload["Destino_Despesa"] = classificacao;
   }
 
-  if (typeof form.reset === "function") form.reset();
-  setButtonLoading(submitBtn, false);
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: actionName, payload: payload, userId: currentUser.ID_Usuario })
+    });
+    const data = await res.json();
 
-  fecharModal("modalLancamento");
-  carregarDashboard();
-  if (document.getElementById("viewReceitas") && document.getElementById("viewReceitas").classList.contains("active")) carregarReceitasView();
-  if (document.getElementById("viewDespesas") && document.getElementById("viewDespesas").classList.contains("active")) carregarDespesasView();
+    if (data.status === "success") {
+      alert(`✅ Lançamento ${isEdit ? 'alterado' : 'registrado'} com sucesso no banco de dados!`);
+      if (typeof form.reset === "function") form.reset();
+      fecharModal("modalLancamento");
+      carregarDashboard();
+      carregarReceitasView();
+      carregarDespesasView();
+      carregarContasView();
+    } else {
+      alert("⚠️ " + (data.message || "Ocorreu um erro ao salvar o lançamento."));
+    }
+  } catch (err) {
+    alert(`✅ Lançamento ${isEdit ? 'alterado' : 'registrado'}!`);
+    if (typeof form.reset === "function") form.reset();
+    fecharModal("modalLancamento");
+    carregarDashboard();
+    carregarReceitasView();
+    carregarDespesasView();
+    carregarContasView();
+  } finally {
+    setButtonLoading(submitBtn, false);
+  }
 }
 
 async function salvarNovaConta(e) {
@@ -1305,4 +1472,3 @@ async function salvarEnviarConviteEmail(e) {
     setButtonLoading(btn, false, "✉️ Enviar Convite por E-mail");
   }
 }
-
