@@ -1,5 +1,5 @@
 <!-- ============================================================================
-     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 15.0 (ESPECIALISTA)
+     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 29.0 (ESPECIALISTA)
      Arquivo: index.html
      Descrição: Tela de Autenticação Rígida com Abas de Login, Cadastro de Titular,
                 Convidado (com ID_Titular) e Criptografia Total dos Dados.
@@ -140,9 +140,16 @@
       </div>
 
       <section class="app-section">
-        <div class="section-title">MAIORES GASTOS DO MÊS (DESPESAS)</div>
+        <div class="section-title">MAIORES GASTOS DO MÊS (DESPESAS POR CATEGORIA)</div>
         <div class="chart-wrapper">
           <canvas id="despesasChart"></canvas>
+        </div>
+      </section>
+
+      <section class="app-section" style="margin-top: 24px;">
+        <div class="section-title">RESUMO DE DESTINAÇÃO DO ORÇAMENTO DO MÊS</div>
+        <div class="chart-wrapper" style="height: 280px;">
+          <canvas id="resumoBarrasChart"></canvas>
         </div>
       </section>
     </div>
@@ -349,9 +356,19 @@
           <select class="form-control" id="selectCartaoOrigem"></select>
         </div>
 
+        <div class="form-group" id="groupTipoGasto">
+          <label>Tipo de Gasto (Destinação do Recurso)</label>
+          <select class="form-control" id="selectTipoGasto" onchange="sincronizarTipoGastoComClassificacao()">
+            <option value="Gastos Essenciais">Gastos Essenciais (Moradia, Alimentação, Saúde, Impostos) 🔴</option>
+            <option value="Despesas Livres">Despesas Livres (Lazer, Vestuário, Pessoais, Outros) 💗</option>
+            <option value="Educação">Educação (Escola, Cursos, Livros) 🟣</option>
+            <option value="Investimentos">Investimentos / Reservas 🟡</option>
+          </select>
+        </div>
+
         <div class="form-group" id="groupClassificacaoDespesa">
           <label>Classificação da Despesa</label>
-          <select class="form-control" id="selectClassificacaoDespesa">
+          <select class="form-control" id="selectClassificacaoDespesa" onchange="sincronizarClassificacaoComTipoGasto()">
             <option value="Moradia">Moradia (Aluguel, Luz, Água, Gás)</option>
             <option value="Alimentação">Alimentação (Supermercado, Feira)</option>
             <option value="Transporte">Transporte (Combustível, Uber)</option>
