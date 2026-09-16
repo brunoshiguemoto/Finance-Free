@@ -138,9 +138,9 @@ function validarSenhaForte(senha) {
 async function realizarLoginSubmit(e) {
   if (e) {
     e.preventDefault();
-    if (typeof e.stopPropagation === "function") e.stopPropagation();
+    if (e.stopPropagation) e.stopPropagation();
   }
-
+  
   const form = document.getElementById("formLoginTab");
   const btn = document.getElementById("btnLoginSubmit") || (form ? form.querySelector('button[type="submit"]') : null);
 
@@ -158,8 +158,7 @@ async function realizarLoginSubmit(e) {
   setButtonLoading(btn, true, "Verificando...");
 
   try {
-    const loginUrl = `${API_URL}?action=login&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`;
-    const res = await fetch(loginUrl);
+    const res = await fetch(`${API_URL}?action=login&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`);
     const data = await res.json();
 
     if (data.status === "success" && data.user) {
@@ -174,7 +173,7 @@ async function realizarLoginSubmit(e) {
     }
   } catch (err) {
     console.error("Erro no login:", err);
-    alert("❌ Erro ao conectar com o servidor. Tente novamente em instantes.");
+    alert("❌ Erro ao conectar com o servidor. Verifique sua conexão e tente novamente.");
   } finally {
     setButtonLoading(btn, false);
   }
@@ -1200,7 +1199,7 @@ function togglePasswordVisibility(inputId, btn) {
 
 
 /* NAVEGAÇÃO E ENVIO DE CONVITE POR E-MAIL */
-async async function carregarConvidarParceiroView() {
+async function carregarConvidarParceiroView() {
   const display = document.getElementById("displaySeuIDPage");
   if (display && currentUser) {
     display.textContent = currentUser.ID_Usuario || "USR_123456";
@@ -1306,3 +1305,4 @@ async function salvarEnviarConviteEmail(e) {
     setButtonLoading(btn, false, "✉️ Enviar Convite por E-mail");
   }
 }
+
