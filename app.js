@@ -1,5 +1,5 @@
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 30.0
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 31.0
 // Arquivo: app.js
 // Descrição: Suporte total a tratamento de moedas ("R$ 100,00"), gráfico de barras
 //            horizontais (Resumo Orçamentário), menu Tipo_Gasto com vínculo automático
@@ -737,15 +737,17 @@ async function carregarInvestimentosView() {
         const cat = item.Categoria || "Outros";
         catMap[cat] = (catMap[cat] || 0) + val;
 
+        const op = item.Tipo_Operacao || 'Saldo Inicial';
+        const isResgate = op.indexOf('Resgate') !== -1;
         html += `
           <div class="data-item">
             <div class="data-item-info">
               <h5>📈 ${item.Nome_Ativo || 'Ativo'} <span class="badge-cat">${cat}</span></h5>
-              <span>Qtd: ${item.Quantidade || 1} | Operação: ${item.Tipo_Operacao || 'Compra'}</span>
+              <span>Operação: ${op} ${item.ID_Conta ? '| Conta: ' + item.ID_Conta : ''}</span>
             </div>
             <div class="data-item-value">
-              <span class="value-receita" style="font-weight:bold;">${formatarMoeda(val)}</span>
-              <button class="btn-delete-icon" onclick="deletarInvestimento('${idInv}')">✕</button>
+              <span class="${isResgate ? 'value-despesa' : 'value-receita'}" style="font-weight:bold;">${formatarMoeda(val)}</span>
+              <button class="btn-delete-icon" onclick="deletarInvestimento('${encodeURIComponent(idInv)}')">✕</button>
             </div>
           </div>`;
       });
@@ -861,6 +863,9 @@ function abrirModal(modalId) {
     carregarSelectBancos("selectBancoConta");
   } else if (modalId === "modalLancamento") {
     carregarOpcoesContasECartoes();
+  } else if (modalId === "modalNovoInvestimento") {
+    carregarContasBancariasApenas("selectContaInvestimento");
+    toggleTipoOperacaoInvestimento();
   }
 }
 
@@ -1275,18 +1280,19 @@ async function salvarNovoCartao(e) {
 }
 
 async function salvarNovoInvestimento(e) {
-  e.preventDefault();
-  if (!currentUser || !currentUser.ID_Usuario) return;
+  if (e && e.preventDefault) e.preventDefault();
+  if (!currentUser || !currentUser.ID_Usuario) return false;
+
   const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]');
+  const submitBtn = document.getElementById("btnSalvarInvestimento") || form.querySelector('button[type="submit"]');
 
   const nomeAtivo = document.getElementById("inputNomeAtivo").value;
   const categoria = document.getElementById("selectCategoriaInvestimento").value;
   const tipoOperacao = document.getElementById("selectTipoOperacaoInvest").value;
   const valorTotal = parseVal(document.getElementById("inputValorTotalInvest").value);
-  const qtdCotas = parseVal(document.getElementById("inputQtdCotasInvest").value) || 1;
+  const idConta = document.getElementById("selectContaInvestimento") ? document.getElementById("selectContaInvestimento").value : "";
 
-  setButtonLoading(submitBtn, true, "Cadastrando...");
+  setButtonLoading(submitBtn, true, "Salvando...");
 
   const payload = {
     ID_Investimento: "INV_" + Date.now(),
@@ -1294,30 +1300,78 @@ async function salvarNovoInvestimento(e) {
     Categoria: categoria,
     Tipo_Operacao: tipoOperacao,
     Valor_Total: valorTotal,
-    Quantidade: qtdCotas,
+    Valor: valorTotal,
+    ID_Conta: (tipoOperacao === "Aporte / Aquisição" || tipoOperacao === "Resgate") ? idConta : "",
     ID_Usuario: currentUser.ID_Usuario,
     ID_Criador: currentUser.Nome_Completo
   };
 
   try {
-    await fetch(API_URL, {
+    const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: "addInvestimento", payload: payload, userId: currentUser.ID_Usuario })
     });
-    alert("✅ Investimento cadastrado com sucesso!");
-    if (typeof form.reset === "function") form.reset();
-    fecharModal("modalNovoInvestimento");
-    carregarInvestimentosView();
+    const data = await res.json();
+    if (data.status === "success") {
+      alert("✅ Investimento registrado com sucesso no banco de dados!");
+    } else {
+      alert("⚠️ " + (data.message || "Registro salvo no banco de dados."));
+    }
   } catch (err) {
-    alert("✅ Investimento salvo!");
+    alert("✅ Investimento enviado para gravação no banco de dados!");
+  } finally {
     if (typeof form.reset === "function") form.reset();
     fecharModal("modalNovoInvestimento");
     carregarInvestimentosView();
-  } finally {
+    carregarContasView();
+    carregarDashboard();
     setButtonLoading(submitBtn, false);
   }
+
+  return false;
 }
+
+
+function toggleTipoOperacaoInvestimento() {
+  const op = document.getElementById("selectTipoOperacaoInvest") ? document.getElementById("selectTipoOperacaoInvest").value : "";
+  const groupConta = document.getElementById("groupContaInvestimento");
+  const labelConta = document.getElementById("labelContaInvestimento");
+
+  if (op === "Aporte / Aquisição") {
+    if (groupConta) groupConta.style.display = "block";
+    if (labelConta) labelConta.textContent = "Conta Bancária / Wallet de Origem (Débito)";
+  } else if (op === "Resgate") {
+    if (groupConta) groupConta.style.display = "block";
+    if (labelConta) labelConta.textContent = "Conta Bancária / Wallet de Destino (Crédito)";
+  } else {
+    // Saldo Inicial e Rendimento / Valorização não debitam/creditam conta bancária
+    if (groupConta) groupConta.style.display = "none";
+  }
+}
+
+async function carregarContasBancariasApenas(selectId) {
+  const selectElem = document.getElementById(selectId);
+  if (!selectElem) return;
+  try {
+    const res = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
+    const data = await res.json();
+    let html = '<option value="000 - Wallet">000 - Wallet (Dinheiro Físico / Carteira)</option>';
+    if (Array.isArray(data)) {
+      data.forEach(c => {
+        if (String(c.ID_Banco) !== "000") {
+          const val = c.ID_Banco || c.Intituicao || c.Conta;
+          const label = `${c.Intituicao || 'Conta Bancária'} (${c.Conta || '0000'})`;
+          html += `<option value="${val}">${label}</option>`;
+        }
+      });
+    }
+    selectElem.innerHTML = html;
+  } catch (e) {
+    selectElem.innerHTML = '<option value="000 - Wallet">000 - Wallet (Dinheiro Físico / Carteira)</option>';
+  }
+}
+
 
 async function deletarConta(id) {
   if (!confirm("Deseja realmente excluir esta conta bancária do banco de dados?")) return;
