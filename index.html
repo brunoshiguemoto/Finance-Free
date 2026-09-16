@@ -1,26 +1,21 @@
-<!-- ============================================================================
-     FINANCE FREE - ESTRUTURA PRINCIPAL DO APLICATIVO (HTML5) - VERSÃO 33.0 (ESPECIALISTA)
-     Arquivo: index.html
-     Descrição: Tela de Autenticação Rígida com Abas de Login, Cadastro de Titular,
-                Convidado (com ID_Titular) e Criptografia Total dos Dados.
-     ============================================================================ -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Finance Free</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Finance Free - Gestão Financeira Familiar</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <!-- TELA DE LOGIN & AUTENTICAÇÃO OBRIGATÓRIA (BLOQUEIA ACESSO NÃO AUTORIZADO) -->
+  <!-- TELA DE AUTENTICAÇÃO E BLOQUEIO DE SEGURANÇA -->
   <div class="auth-overlay" id="authScreen">
     <div class="auth-card">
-      <img src="finance_free_logo.png" alt="Finance Free Logo" class="auth-logo" onerror="this.style.display='none'">
-      <h2 style="font-size: 1.4rem; color: #f8fafc; margin-bottom: 4px;">Finance Free</h2>
-      <p style="font-size: 0.78rem; color: #94a3b8;">Gestão Financeira Familiar com Criptografia AES-256</p>
+      <div class="auth-header">
+        <h1 class="app-logo">Finance Free</h1>
+        <p class="app-subtitle">Sua gestão financeira familiar simplificada</p>
+      </div>
 
       <div class="auth-tabs">
         <button class="auth-tab-btn active" id="tabBtnLogin" onclick="alternarAbaAuth('login')">Entrar</button>
@@ -29,7 +24,7 @@
       </div>
 
       <!-- ABA 1: LOGIN -->
-      <form id="formLoginTab" onsubmit="realizarLoginSubmit(event); return false;">
+      <form id="formLoginTab" onsubmit="return realizarLoginSubmit(event)">
         <div class="form-group">
           <label>Seu E-mail</label>
           <input type="email" class="form-control" id="loginEmailInput" placeholder="seuemail@exemplo.com" required>
@@ -45,7 +40,7 @@
       </form>
 
       <!-- ABA 2: CRIAR CONTA (TITULAR) -->
-      <form id="formCadastTab" onsubmit="realizarCadastroSubmit(event); return false;" style="display:none;">
+      <form id="formCadastTab" onsubmit="return realizarCadastroSubmit(event)" style="display:none;">
         <div class="form-group">
           <label>Nome Completo</label>
           <input type="text" class="form-control" id="cadNomeInput" placeholder="Ex: Maria Silva" required>
@@ -72,11 +67,11 @@
             <div class="pwd-item" id="pwdSim"><span>•</span> Símbolo (@$!%*?&)</div>
           </div>
         </div>
-        <button type="submit" class="btn-submit">Cadastrar e Acessar</button>
+        <button type="submit" class="btn-submit" id="btnRegisterSubmit">Cadastrar e Acessar</button>
       </form>
 
       <!-- ABA 3: CADASTRO CONVIDADO -->
-      <form id="formConvidTab" onsubmit="realizarCadastroConvidadoSubmit(event); return false;" style="display:none;">
+      <form id="formConvidTab" onsubmit="return realizarCadastroConvidadoSubmit(event)" style="display:none;">
         <div class="form-group">
           <label>Código do Convite (ID do Titular)</label>
           <input type="text" class="form-control" id="convidIdTitularInput" placeholder="Ex: USR_fd45d63a" required>
@@ -96,29 +91,21 @@
             <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility('convidSenhaInput', this)" title="Mostrar Senha">👁️</button>
           </div>
         </div>
-        <button type="submit" class="btn-submit">Ativar Acesso Convidado</button>
+        <button type="submit" class="btn-submit" id="btnConvidSubmit">Ativar Acesso Convidado</button>
       </form>
-
-      <p style="font-size: 0.7rem; color: #64748b; margin-top: 16px;">Desenvolvido por Bruno Shiguemoto © 2026</p>
     </div>
   </div>
 
-  <!-- CONTEÚDO PRINCIPAL (EXIBIDO SOMENTE APÓS LOGIN AUTENTICADO) -->
-  <main class="main-content" id="mainContent" style="display:none;">
+  <!-- CONTEÚDO PRINCIPAL DO APLICATIVO -->
+  <header class="app-header">
+    <div class="header-user-info">
+      <div class="avatar-circle" id="userAvatar">FF</div>
+      <span class="user-name" id="userNameDisplay">Usuário</span>
+    </div>
+    <div class="app-title-central">Finance Free</div>
+  </header>
 
-    <!-- CABEÇALHO & USER PROFILE -->
-    <header class="app-header">
-      <div class="brand-wrapper" onclick="encerrarSessao()">
-        <img src="finance_free_logo.png" alt="Finance Free Logo" class="brand-logo" onerror="this.style.display='none'">
-        <div>
-          <h4 id="userNameDisplay">---</h4>
-          <span style="font-size: 0.72rem; color: #94a3b8;">Sessão Ativa 🔒 (Sair 🚪)</span>
-        </div>
-      </div>
-      <div class="gamification-pill">
-        🏆 <span id="pontosTotal">100 pts</span>
-      </div>
-    </header>
+  <main class="main-content" id="mainContent" style="display:none;">
 
     <!-- VIEW 1: HOME / DASHBOARD -->
     <div class="app-view active" id="viewHome">
@@ -140,16 +127,16 @@
       </div>
 
       <section class="app-section">
-        <div class="section-title">MAIORES GASTOS DO MÊS (DESPESAS POR CATEGORIA)</div>
+        <div class="section-title">MAIORES GASTOS DO MÊS (DESPESAS)</div>
         <div class="chart-wrapper">
           <canvas id="despesasChart"></canvas>
         </div>
       </section>
 
-      <section class="app-section" style="margin-top: 24px;">
-        <div class="section-title">RESUMO DE DESTINAÇÃO DO ORÇAMENTO DO MÊS</div>
-        <div class="chart-wrapper" style="height: 280px;">
-          <canvas id="resumoBarrasChart"></canvas>
+      <section class="app-section">
+        <div class="section-title">RESUMO ORÇAMENTÁRIO DO MÊS</div>
+        <div class="chart-wrapper" style="height: 240px;">
+          <canvas id="resumoOrcamentarioChart"></canvas>
         </div>
       </section>
     </div>
@@ -179,7 +166,6 @@
         <button class="btn-add-inline" onclick="abrirModal('modalConta')">+ Adicionar Conta Bancária</button>
       </div>
       <div class="data-list" id="listaContasView"></div>
-
     </div>
 
     <!-- VIEW 5: CARTÕES DE CRÉDITO -->
@@ -198,21 +184,30 @@
         <button class="btn-add-inline" onclick="abrirModalNovoInvestimento()">+ Novo Investimento</button>
       </div>
       <div class="summary-cards">
-        <div class="card" style="grid-column: span 2;">
-          <div class="card-title">Patrimônio Investido Total</div>
-          <div class="card-value" id="totalPatrimonioInvest" style="color: #10b981; font-size: 1.5rem;">R$ 0,00</div>
+        <div class="card">
+          <div class="card-title">Investimentos Acumulados</div>
+          <div class="card-value value-receita" id="totalInvestimentos">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Investimentos do Mês</div>
+          <div class="card-value value-receita" style="color: #f59e0b;" id="totalInvestimentosMes">R$ 0,00</div>
         </div>
       </div>
+
       <section class="app-section">
-        <div class="section-title">DISTRIBUIÇÃO POR CATEGORIA DE ATIVO</div>
+        <div class="section-title">DISTRIBUIÇÃO DA CARTEIRA POR CATEGORIA</div>
         <div class="chart-wrapper">
           <canvas id="investimentosChart"></canvas>
         </div>
       </section>
-      <div class="data-list" id="listaInvestimentosView"></div>
+
+      <section class="app-section">
+        <div class="section-title">MEUS ATIVOS & APORTES</div>
+        <div class="data-list" id="listaInvestimentosView"></div>
+      </section>
     </div>
 
-    <!-- VIEW 7: SAÚDE FINANCEIRA (BARRA COMPARATIVA) -->
+    <!-- VIEW 7: SAÚDE FINANCEIRA -->
     <div class="app-view" id="viewSaudeFinanceira">
       <div class="view-header">
         <h2>🩺 Saúde Financeira</h2>
@@ -226,45 +221,39 @@
       </section>
     </div>
 
-    <!-- VIEW 8: CONVIDAR PARCEIRO (ENVIAR CONVITE POR E-MAIL) -->
+    <!-- VIEW 8: CONVIDAR PARCEIRO (TELA DEDICADA) -->
     <div class="app-view" id="viewConvidarParceiro">
       <div class="view-header">
         <h2>🤝 Convidar Parceiro(a)</h2>
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">
-          Envie um convite por e-mail para que seu cônjuge ou parceiro(a) acesse a mesma conta familiar.
-        </p>
+        <span style="font-size: 0.78rem; color: #94a3b8;">Compartilhe a gestão financeira familiar</span>
       </div>
 
-      <!-- CARD DO CÓDIGO DO TITULAR -->
-      <div class="card" style="margin-bottom: 20px; border: 1px dashed var(--accent-green); background: rgba(16, 185, 129, 0.05);">
-        <div class="card-title" style="color: var(--accent-green);">Seu Código de Acesso (ID de Titular)</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
-          <span id="displaySeuIDPage" style="font-size: 1.3rem; font-weight: bold; color: var(--text-main); letter-spacing: 1px;">-</span>
-          <button class="btn-add-inline" onclick="copiarCodigoTitular()">📋 Copiar Código</button>
-        </div>
-      </div>
-
-      <!-- FORMULÁRIO DE CONVITE POR E-MAIL -->
       <section class="app-section">
-        <div class="section-title">Enviar Convite por E-mail</div>
-        <form onsubmit="salvarEnviarConviteEmail(event)">
+        <div class="section-title">SEU CÓDIGO DE TITULAR</div>
+        <div style="background-color: #1e293b; padding: 16px; border-radius: 10px; border: 1px dashed #10b981; text-align: center; margin-bottom: 20px;">
+          <span style="font-size: 0.85rem; color: #94a3b8; display: block; margin-bottom: 6px;">CÓDIGO DE CONVITE (ID):</span>
+          <span style="font-size: 1.6rem; font-weight: bold; color: #10b981; letter-spacing: 2px;" id="displaySeuIDPage">USR_123456</span>
+          <button type="button" class="btn-add-inline" style="margin-top: 10px; font-size: 0.82rem;" onclick="copiarCodigoTitular()">📋 Copiar Código</button>
+        </div>
+      </section>
+
+      <section class="app-section">
+        <div class="section-title">ENVIAR CONVITE POR E-MAIL</div>
+        <form onsubmit="return salvarEnviarConviteEmail(event)" style="background: #1e293b; padding: 18px; border-radius: 12px; border: 1px solid #334155;">
           <div class="form-group">
             <label>Nome do Convidado(a)</label>
             <input type="text" class="form-control" id="inputNomeConvidadoPage" placeholder="Ex: Julita Rodrigues" required>
           </div>
           <div class="form-group">
             <label>E-mail do Convidado(a)</label>
-            <input type="email" class="form-control" id="inputEmailConvidadoPage" placeholder="exemplo@hotmail.com" required>
+            <input type="email" class="form-control" id="inputEmailConvidadoPage" placeholder="convidado@exemplo.com" required>
           </div>
-          <button type="submit" class="btn-submit" id="btnEnviarConviteSubmit">
-            ✉️ Enviar Convite por E-mail
-          </button>
+          <button type="submit" class="btn-submit" id="btnEnviarConviteSubmit">✉️ Enviar Convite por E-mail</button>
         </form>
       </section>
 
-      <!-- LISTA DE PARCEIROS VINCULADOS / CONVITES ENVIADOS -->
-      <section class="app-section">
-        <div class="section-title">Parceiros Vinculados / Convites Enviados</div>
+      <section class="app-section" style="margin-top: 25px;">
+        <div class="section-title">PARCEIROS VINCULADOS À CONTA</div>
         <div class="data-list" id="listaParceirosConvidadoView"></div>
       </section>
     </div>
@@ -305,17 +294,17 @@
     </nav>
   </aside>
 
-  <!-- BOTÃO FLUTUANTE (+ CANTO INFERIOR ESQUERDO) -->
-  <button class="btn-floating-add" id="btnFloatingAdd" onclick="abrirModalNovoLancamento()" style="display:none;">+</button>
+  <!-- BOTÃO FLUTUANTE DE NOVO LANÇAMENTO (➕) -->
+  <button class="btn-floating-add" id="btnFloatingAdd" onclick="abrirModalNovoLancamento()" title="Adicionar Lançamento" style="display:none;">+</button>
 
-  <!-- MODAL: NOVO LANÇAMENTO (+) -->
+  <!-- MODAL: NOVO / EDITAR / EXCLUIR LANÇAMENTO (RECEITA / DESPESA) -->
   <div class="modal-overlay" id="modalLancamento">
     <div class="modal-card">
       <div class="modal-header">
         <h3 class="modal-title" id="modalLancamentoTitle">Novo Lançamento</h3>
         <button class="close-btn" onclick="fecharModal('modalLancamento')">✕</button>
       </div>
-      <form onsubmit="salvarLancamento(event)">
+      <form onsubmit="return salvarLancamento(event)">
         <input type="hidden" id="inputTransacaoId">
         
         <div class="form-group">
@@ -361,8 +350,8 @@
           <select class="form-control" id="selectTipoGasto" onchange="sincronizarTipoGastoComClassificacao()">
             <option value="Gastos Essenciais">Gastos Essenciais (Moradia, Alimentação, Saúde, Impostos) 🔴</option>
             <option value="Despesas Livres">Despesas Livres (Lazer, Vestuário, Pessoais, Outros) 💗</option>
-            <option value="Educação">Educação (Escola, Cursos, Livros) 🟣</option>
-            <option value="Investimentos">Investimentos / Reservas 🟡</option>
+            <option value="Educação">Educação (Escolas, Cursos, Treinamentos) 🟣</option>
+            <option value="Investimentos">Investimentos / Aportes 🟡</option>
           </select>
         </div>
 
@@ -403,9 +392,9 @@
           <textarea class="form-control" id="inputObservacoes" rows="2" placeholder="Explicação do lançamento..."></textarea>
         </div>
 
-        <div class="modal-footer-buttons" style="display: flex; gap: 10px; margin-top: 20px;">
-          <button type="submit" class="btn-submit" id="btnSalvarLancamento" style="flex: 1;">💾 Salvar Lançamento</button>
-          <button type="button" class="btn-submit" id="btnExcluirLancamento" style="flex: 1; background-color: #ef4444; display: none;" onclick="executarExclusaoLancamentoAtual()">🗑️ Excluir Registro</button>
+        <div class="modal-footer-btns">
+          <button type="submit" class="btn-submit" id="btnSalvarLancamento">💾 Salvar Lançamento</button>
+          <button type="button" class="btn-delete-modal" id="btnExcluirLancamento" style="display:none;" onclick="executarExclusaoLancamentoAtual()">🗑️ Excluir Registro</button>
         </div>
       </form>
     </div>
@@ -418,46 +407,43 @@
         <h3 class="modal-title">Cadastrar Conta Bancária ou Wallet</h3>
         <button class="close-btn" onclick="fecharModal('modalConta')">✕</button>
       </div>
-      <form onsubmit="salvarNovaConta(event)">
+      <form onsubmit="return salvarNovaConta(event)">
         <div class="form-group">
           <label>Selecione o Banco ou Wallet</label>
           <select class="form-control" id="selectBancoConta" required>
             <option value="">-- Selecione o Banco --</option>
-            <option value="000 - Wallet (Dinheiro Físico / Carteira)">000 - Wallet (Dinheiro Físico / Carteira)</option>
-            <option value="001 - Banco do Brasil S.A.">001 - Banco do Brasil S.A.</option>
-            <option value="033 - Banco Santander (Brasil) S.A.">033 - Banco Santander (Brasil) S.A.</option>
-            <option value="104 - Caixa Econômica Federal">104 - Caixa Econômica Federal</option>
-            <option value="237 - Banco Bradesco S.A.">237 - Banco Bradesco S.A.</option>
-            <option value="341 - Itaú Unibanco S.A.">341 - Itaú Unibanco S.A.</option>
-            <option value="077 - Banco Inter S.A.">077 - Banco Inter S.A.</option>
-            <option value="260 - Nu Pagamentos S.A. (Nubank)">260 - Nu Pagamentos S.A. (Nubank)</option>
-            <option value="336 - Banco C6 S.A.">336 - Banco C6 S.A.</option>
-            <option value="212 - Banco Original S.A.">212 - Banco Original S.A.</option>
-            <option value="422 - Banco Safra S.A.">422 - Banco Safra S.A.</option>
-            <option value="655 - Banco Neon S.A.">655 - Banco Neon S.A.</option>
-            <option value="041 - Banco Banrisul S.A.">041 - Banco Banrisul S.A.</option>
-            <option value="756 - SICOOB">756 - SICOOB</option>
-            <option value="748 - SICREDI S.A.">748 - SICREDI S.A.</option>
-            <option value="637 - Banco BTG Pactual S.A.">637 - Banco BTG Pactual S.A.</option>
-            <option value="389 - Banco Mercantil do Brasil S.A.">389 - Banco Mercantil do Brasil S.A.</option>
-            <option value="070 - BRB - Banco de Brasília S.A.">070 - BRB - Banco de Brasília S.A.</option>
-            <option value="136 - Unicred Cooperativa">136 - Unicred Cooperativa</option>
-            <option value="999 - Outra Instituição Financeira">999 - Outra Instituição Financeira</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Agência</label>
-          <input type="text" class="form-control" id="inputAgencia" placeholder="0001">
+          <label>Agência (Opcional)</label>
+          <input type="text" class="form-control" id="inputAgenciaConta" placeholder="Ex: 0001">
         </div>
         <div class="form-group">
-          <label>Conta com Dígito</label>
-          <input type="text" class="form-control" id="inputConta" placeholder="12345-6" required>
+          <label>Número da Conta (Opcional)</label>
+          <input type="text" class="form-control" id="inputNumeroConta" placeholder="Ex: 12345-6">
         </div>
         <div class="form-group">
           <label>Saldo Inicial (R$)</label>
-          <input type="number" step="0.01" class="form-control" id="inputSaldoInicial" placeholder="0.00">
+          <input type="number" step="0.01" class="form-control" id="inputSaldoInicialConta" placeholder="0.00" required>
         </div>
-        <button type="submit" class="btn-submit">Cadastrar Conta</button>
+        <button type="submit" class="btn-submit" id="btnSalvarConta">Salvar Conta Bancária</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EDITAR SALDO WALLET -->
+  <div class="modal-overlay" id="modalEditarWallet">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">💵 Editar Saldo da Wallet</h3>
+        <button class="close-btn" onclick="fecharModal('modalEditarWallet')">✕</button>
+      </div>
+      <form onsubmit="return salvarSaldoWallet(event)">
+        <div class="form-group">
+          <label>Saldo Físico Atual (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="inputSaldoWallet" placeholder="0.00" required>
+        </div>
+        <button type="submit" class="btn-submit">Atualizar Saldo Wallet</button>
       </form>
     </div>
   </div>
@@ -466,55 +452,60 @@
   <div class="modal-overlay" id="modalCartao">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Cadastrar Cartão de Crédito</h3>
+        <h3 class="modal-title">💳 Cadastrar Cartão de Crédito</h3>
         <button class="close-btn" onclick="fecharModal('modalCartao')">✕</button>
       </div>
-      <form onsubmit="salvarNovoCartao(event)">
+      <form onsubmit="return salvarNovoCartao(event)">
         <div class="form-group">
-          <label>Nome do Cartão</label>
-          <input type="text" class="form-control" id="inputNomeCartao" placeholder="Ex: Nubank Violeta" required>
+          <label>Nome do Cartão / Apelido</label>
+          <input type="text" class="form-control" id="inputNomeCartao" placeholder="Ex: Nubank, Black Itaú" required>
         </div>
         <div class="form-group">
-          <label>Limite Total de Crédito (R$)</label>
-          <input type="number" step="0.01" class="form-control" id="inputLimiteCartao" placeholder="5000.00" required>
-        </div>
-        <div class="form-group">
-          <label>Dia do Fechamento da Fatura</label>
-          <input type="number" min="1" max="31" class="form-control" id="inputDiaFechamento" placeholder="5" required>
+          <label>Limite Total do Cartão (R$)</label>
+          <input type="number" step="0.01" class="form-control" id="inputLimiteTotalCartao" placeholder="5000.00" required>
         </div>
         <div class="form-group">
           <label>Dia do Vencimento da Fatura</label>
-          <input type="number" min="1" max="31" class="form-control" id="inputDiaVencimento" placeholder="12" required>
+          <input type="number" min="1" max="31" class="form-control" id="inputDiaVencimentoCartao" placeholder="Ex: 10" required>
         </div>
-        <button type="submit" class="btn-submit">Cadastrar Cartão</button>
+        <div class="form-group">
+          <label>Dia do Fechamento da Fatura</label>
+          <input type="number" min="1" max="31" class="form-control" id="inputDiaFechamentoCartao" placeholder="Ex: 3" required>
+        </div>
+        <button type="submit" class="btn-submit" id="btnSalvarCartao">Salvar Cartão de Crédito</button>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: NOVO INVESTIMENTO -->
+  <!-- MODAL: CADASTRO / EDIÇÃO / EXCLUSÃO DE INVESTIMENTO -->
   <div class="modal-overlay" id="modalNovoInvestimento">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">📈 Cadastrar Investimento</h3>
+        <h3 class="modal-title" id="modalInvestimentoTitle">📈 Cadastrar Investimento</h3>
         <button class="close-btn" onclick="fecharModal('modalNovoInvestimento')">✕</button>
       </div>
-      <form onsubmit="salvarNovoInvestimento(event)">
+      <form onsubmit="return salvarNovoInvestimento(event)">
+        <input type="hidden" id="inputInvestimentoId">
+
         <div class="form-group">
           <label>Nome do Ativo / Código</label>
-          <input type="text" class="form-control" id="inputNomeAtivo" placeholder="Ex: PETR4, HGLG11, Tesouro Selic" required>
+          <input type="text" class="form-control" id="inputNomeAtivo" placeholder="Ex: PETR4, HGLG11, Tesouro Selic 2032" required>
         </div>
+
         <div class="form-group">
           <label>Categoria do Investimento</label>
           <select class="form-control" id="selectCategoriaInvestimento">
             <option value="Tesouro Direto">Tesouro Direto / Renda Fixa 🏛️</option>
             <option value="Ações">Ações 📈</option>
             <option value="FIIs">FIIs (Fundos Imobiliários) 🏢</option>
+
             <option value="Previdência Privada">Previdência Privada 🛡️</option>
             <option value="Crypto">Crypto (Criptomoedas) 🪙</option>
             <option value="Ativos Internacionais">Ativos Internacionais 🌐</option>
             <option value="Outros Investimentos">Outros Investimentos 💰</option>
           </select>
         </div>
+
         <div class="form-group">
           <label>Tipo de Operação</label>
           <select class="form-control" id="selectTipoOperacaoInvest" onchange="toggleTipoOperacaoInvestimento()">
@@ -524,50 +515,36 @@
             <option value="Resgate">Resgate (Credita em Conta)</option>
           </select>
         </div>
+
         <div class="form-group">
           <label>Valor (R$)</label>
           <input type="number" step="0.01" class="form-control" id="inputValorTotalInvest" placeholder="0.00" required>
         </div>
+
         <div class="form-group">
           <label>Data da Operação / Aporte</label>
           <input type="date" class="form-control" id="inputDataInvestimento">
         </div>
+
         <div class="form-group" id="groupContaInvestimento">
           <label id="labelContaInvestimento">Conta Bancária / Wallet de Origem</label>
           <select class="form-control" id="selectContaInvestimento"></select>
         </div>
-        <button type="submit" class="btn-submit" id="btnSalvarInvestimento">Salvar Investimento</button>
+
+        <div class="form-group">
+          <label>Observações / Anotações</label>
+          <textarea class="form-control" id="inputObservacoesInvestimento" rows="2" placeholder="Anotações sobre este ativo..."></textarea>
+        </div>
+
+        <div class="modal-footer-btns">
+          <button type="submit" class="btn-submit" id="btnSalvarInvestimento">💾 Salvar Investimento</button>
+          <button type="button" class="btn-delete-modal" id="btnExcluirInvestimento" style="display:none;" onclick="executarExclusaoInvestimentoAtual()">🗑️ Excluir Investimento</button>
+        </div>
       </form>
     </div>
   </div>
 
-  <!-- SCRIPTS -->
   <script src="bancos_brasil.js"></script>
   <script src="app.js"></script>
-
-  <!-- MODAL: CONVIDAR PARCEIRO (COMPARTILHAMENTO FAMILIAR) -->
-  <div class="modal-overlay" id="modalConvidarParceiro">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title">🤝 Convidar Parceiro(a)</h3>
-        <button class="close-btn" onclick="fecharModal('modalConvidarParceiro')">✕</button>
-      </div>
-      <div style="font-size: 0.88rem; color: #cbd5e1; margin-bottom: 16px;">
-        <p style="margin-bottom: 8px;">Ao vincular a ID do seu parceiro(a) ou convidado(a), ambos visualizarão e controlarão o mesmo saldo, receitas, despesas e investimentos familiares em tempo real.</p>
-        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
-          <span style="font-size: 0.78rem; color: #94a3b8; display: block;">SUA ID DE TITULAR:</span>
-          <strong id="displaySeuID" style="color: #10b981; font-size: 1.15rem; letter-spacing: 1px;">-</strong>
-        </div>
-      </div>
-      <form onsubmit="salvarVincularConvidado(event)">
-        <div class="form-group">
-          <label>ID ou E-mail do Convidado / Parceiro(a)</label>
-          <input type="text" class="form-control" id="inputIDConvidado" placeholder="Ex: GST_98765432 ou parceiro@email.com" required>
-        </div>
-        <button type="submit" class="btn-submit">Vincular e Compartilhar Conta</button>
-      </form>
-    </div>
-  </div>
-
 </body>
 </html>
