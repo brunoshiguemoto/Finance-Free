@@ -29,7 +29,7 @@
       </div>
 
       <!-- ABA 1: LOGIN -->
-      <form id="formLoginTab" onsubmit="realizarLoginSubmit(event)">
+      <form id="formLoginTab" onsubmit="realizarLoginSubmit(event); return false;">
         <div class="form-group">
           <label>Seu E-mail</label>
           <input type="email" class="form-control" id="loginEmailInput" placeholder="seuemail@exemplo.com" required>
@@ -45,7 +45,7 @@
       </form>
 
       <!-- ABA 2: CRIAR CONTA (TITULAR) -->
-      <form id="formCadastTab" onsubmit="realizarCadastroSubmit(event)" style="display:none;">
+      <form id="formCadastTab" onsubmit="realizarCadastroSubmit(event); return false;" style="display:none;">
         <div class="form-group">
           <label>Nome Completo</label>
           <input type="text" class="form-control" id="cadNomeInput" placeholder="Ex: Maria Silva" required>
@@ -76,7 +76,7 @@
       </form>
 
       <!-- ABA 3: CADASTRO CONVIDADO -->
-      <form id="formConvidTab" onsubmit="realizarCadastroConvidadoSubmit(event)" style="display:none;">
+      <form id="formConvidTab" onsubmit="realizarCadastroConvidadoSubmit(event); return false;" style="display:none;">
         <div class="form-group">
           <label>Código do Convite (ID do Titular)</label>
           <input type="text" class="form-control" id="convidIdTitularInput" placeholder="Ex: USR_fd45d63a" required>
