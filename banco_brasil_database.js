@@ -1,8 +1,3 @@
-// ============================================================================
-// FINANCE FREE - BANCO DE DADOS DE BANCOS DO BRASIL - VERSÃO 15.0
-// Arquivo: bancos_brasil.js
-// ============================================================================
-
 const BANCOS_BRASIL = [
   { codigo: "000", nome: "Wallet (Dinheiro Físico / Carteira)" },
   { codigo: "001", nome: "Banco do Brasil S.A." },
@@ -29,12 +24,13 @@ const BANCOS_BRASIL = [
 function carregarSelectBancos(selectId) {
   const selectElem = document.getElementById(selectId);
   if (!selectElem) return;
-  
-  selectElem.innerHTML = '<option value="">-- Selecione o Banco ou Wallet --</option>';
-  BANCOS_BRASIL.forEach(banco => {
-    const opt = document.createElement("option");
-    opt.value = `${banco.codigo} - ${banco.nome}`;
-    opt.textContent = `${banco.codigo} - ${banco.nome}`;
-    selectElem.appendChild(opt);
-  });
+  if (selectElem.options.length <= 1) {
+    selectElem.innerHTML = '<option value="">-- Selecione o Banco --</option>';
+    BANCOS_BRASIL.forEach(banco => {
+      const opt = document.createElement("option");
+      opt.value = `${banco.codigo} - ${banco.nome}`;
+      opt.textContent = `${banco.codigo} - ${banco.nome}`;
+      selectElem.appendChild(opt);
+    });
+  }
 }
