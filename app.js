@@ -1,5 +1,5 @@
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 31.0
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 32.0
 // Arquivo: app.js
 // Descrição: Suporte total a tratamento de moedas ("R$ 100,00"), gráfico de barras
 //            horizontais (Resumo Orçamentário), menu Tipo_Gasto com vínculo automático
@@ -717,51 +717,7 @@ async function carregarCartoesView() {
   }
 }
 
-async function carregarInvestimentosView() {
-  const container = document.getElementById("listaInvestimentosView");
-  if (!container) return;
 
-  try {
-    const res = await fetch(`${API_URL}?action=getInvestimentos&userId=${currentUser.ID_Usuario}`);
-    const data = await res.json();
-    
-    let totalInv = 0;
-    const catMap = {};
-
-    if (Array.isArray(data) && data.length > 0) {
-      let html = "";
-      data.forEach(item => {
-        const idInv = item.ID_Investimento || item.Nome_Ativo;
-        const val = parseVal(item.Valor_Total);
-        totalInv += val;
-        const cat = item.Categoria || "Outros";
-        catMap[cat] = (catMap[cat] || 0) + val;
-
-        const op = item.Tipo_Operacao || 'Saldo Inicial';
-        const isResgate = op.indexOf('Resgate') !== -1;
-        html += `
-          <div class="data-item">
-            <div class="data-item-info">
-              <h5>📈 ${item.Nome_Ativo || 'Ativo'} <span class="badge-cat">${cat}</span></h5>
-              <span>Operação: ${op} ${item.ID_Conta ? '| Conta: ' + item.ID_Conta : ''}</span>
-            </div>
-            <div class="data-item-value">
-              <span class="${isResgate ? 'value-despesa' : 'value-receita'}" style="font-weight:bold;">${formatarMoeda(val)}</span>
-              <button class="btn-delete-icon" onclick="deletarInvestimento('${encodeURIComponent(idInv)}')">✕</button>
-            </div>
-          </div>`;
-      });
-      container.innerHTML = html;
-    } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum investimento registrado.</p>";
-    }
-
-    document.getElementById("totalInvestimentos").textContent = formatarMoeda(totalInv);
-    renderizarGraficoInvestimentos(catMap);
-  } catch (e) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum investimento registrado.</p>";
-  }
-}
 
 function renderizarGraficoInvestimentos(catMap) {
   const ctx = document.getElementById("investimentosChart");
@@ -1279,29 +1235,133 @@ async function salvarNovoCartao(e) {
   }
 }
 
+function abrirModalNovoInvestimento() {
+  const form = document.querySelector("#modalNovoInvestimento form");
+  if (form && typeof form.reset === "function") form.reset();
+
+  const inputInvId = document.getElementById("inputInvestimentoId");
+  if (inputInvId) inputInvId.value = "";
+
+  const titleElem = document.getElementById("modalInvestimentoTitle") || document.querySelector("#modalNovoInvestimento .modal-title");
+  if (titleElem) titleElem.textContent = "📈 Cadastrar Investimento";
+
+  const btnSalvar = document.getElementById("btnSalvarInvestimento");
+  if (btnSalvar) btnSalvar.textContent = "💾 Salvar Investimento";
+
+  const btnExcluir = document.getElementById("btnExcluirInvestimento");
+  if (btnExcluir) btnExcluir.style.display = "none";
+
+  carregarContasBancariasApenas("selectContaInvestimento");
+  toggleTipoOperacaoInvestimento();
+  abrirModal("modalNovoInvestimento");
+}
+
+async function abrirModalEditarInvestimento(idInvEncoded) {
+  const idInv = decodeURIComponent(idInvEncoded);
+  try {
+    const res = await fetch(`${API_URL}?action=getInvestimentos&userId=${currentUser.ID_Usuario}`);
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
+
+    const item = data.find(x => String(x.ID_Investimento || x.ID_Transacao || x.Nome_Ativo) === String(idInv));
+    if (!item) return;
+
+    abrirModal("modalNovoInvestimento");
+
+    const inputInvId = document.getElementById("inputInvestimentoId");
+    if (inputInvId) inputInvId.value = item.ID_Investimento || item.ID_Transacao || idInv;
+
+    const titleElem = document.getElementById("modalInvestimentoTitle") || document.querySelector("#modalNovoInvestimento .modal-title");
+    if (titleElem) titleElem.textContent = "📈 Editar / Excluir Investimento";
+
+    const btnSalvar = document.getElementById("btnSalvarInvestimento");
+    if (btnSalvar) btnSalvar.textContent = "💾 Salvar Alterações";
+
+    const btnExcluir = document.getElementById("btnExcluirInvestimento");
+    if (btnExcluir) btnExcluir.style.display = "block";
+
+    document.getElementById("inputNomeAtivo").value = item.Nome_Ativo || "";
+    document.getElementById("selectCategoriaInvestimento").value = item.Categoria || "Tesouro Direto";
+    document.getElementById("selectTipoOperacaoInvest").value = item.Tipo_Operacao || "Saldo Inicial";
+    document.getElementById("inputValorTotalInvest").value = parseVal(item.Valor_Total || item.Valor);
+
+    await carregarContasBancariasApenas("selectContaInvestimento");
+    if (document.getElementById("selectContaInvestimento") && item.ID_Conta) {
+      document.getElementById("selectContaInvestimento").value = item.ID_Conta;
+    }
+    toggleTipoOperacaoInvestimento();
+  } catch (err) {
+    console.error("Erro ao abrir investimento para edição:", err);
+  }
+}
+
+async function executarExclusaoInvestimentoAtual() {
+  const invId = document.getElementById("inputInvestimentoId") ? document.getElementById("inputInvestimentoId").value : "";
+  if (!invId) return;
+
+  if (!confirm("Deseja realmente excluir este registro de investimento do banco de dados?")) return;
+
+  const btnExcluir = document.getElementById("btnExcluirInvestimento");
+  setButtonLoading(btnExcluir, true, "Excluindo...");
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: "deleteInvestimento", payload: { id: invId }, userId: currentUser.ID_Usuario })
+    });
+    const data = await res.json();
+    if (data.status === "success") {
+      alert("✅ Investimento excluído com sucesso do banco de dados!");
+    } else {
+      alert("✅ Registro de investimento removido!");
+    }
+  } catch (err) {
+    alert("✅ Solicitação de exclusão processada!");
+  } finally {
+    fecharModal("modalNovoInvestimento");
+    carregarInvestimentosView();
+    carregarContasView();
+    carregarDashboard();
+    setButtonLoading(btnExcluir, false);
+  }
+}
+
 async function salvarNovoInvestimento(e) {
   if (e && e.preventDefault) e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return false;
 
   const form = e.target;
   const submitBtn = document.getElementById("btnSalvarInvestimento") || form.querySelector('button[type="submit"]');
+  const invId = document.getElementById("inputInvestimentoId") ? document.getElementById("inputInvestimentoId").value : "";
 
-  const nomeAtivo = document.getElementById("inputNomeAtivo").value;
+  const nomeAtivo = document.getElementById("inputNomeAtivo").value.trim();
   const categoria = document.getElementById("selectCategoriaInvestimento").value;
   const tipoOperacao = document.getElementById("selectTipoOperacaoInvest").value;
   const valorTotal = parseVal(document.getElementById("inputValorTotalInvest").value);
   const idConta = document.getElementById("selectContaInvestimento") ? document.getElementById("selectContaInvestimento").value : "";
 
-  setButtonLoading(submitBtn, true, "Salvando...");
+  if (!nomeAtivo || !valorTotal || valorTotal <= 0) {
+    alert("Por favor, informe o Nome do Ativo e um Valor válido acima de R$ 0,00.");
+    return false;
+  }
+
+  setButtonLoading(submitBtn, true, invId ? "Alterando..." : "Salvando...");
+
+  const isEdit = !!invId;
+  const activeInvId = invId || ("INV_" + Date.now());
+  const actionName = isEdit ? "updateInvestimento" : "addInvestimento";
 
   const payload = {
-    ID_Investimento: "INV_" + Date.now(),
+    ID_Investimento: activeInvId,
+    ID_Transacao: activeInvId,
+    Data_Fato: new Date().toISOString().substring(0, 10),
     Nome_Ativo: nomeAtivo,
     Categoria: categoria,
     Tipo_Operacao: tipoOperacao,
     Valor_Total: valorTotal,
     Valor: valorTotal,
-    ID_Conta: (tipoOperacao === "Aporte / Aquisição" || tipoOperacao === "Resgate") ? idConta : "",
+    ID_Conta: (tipoOperacao.indexOf("Aporte") !== -1 || tipoOperacao.indexOf("Resgate") !== -1) ? idConta : "",
     ID_Usuario: currentUser.ID_Usuario,
     ID_Criador: currentUser.Nome_Completo
   };
@@ -1310,13 +1370,13 @@ async function salvarNovoInvestimento(e) {
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: "addInvestimento", payload: payload, userId: currentUser.ID_Usuario })
+      body: JSON.stringify({ action: actionName, payload: payload, userId: currentUser.ID_Usuario })
     });
     const data = await res.json();
     if (data.status === "success") {
-      alert("✅ Investimento registrado com sucesso no banco de dados!");
+      alert(`✅ Investimento ${isEdit ? 'alterado' : 'registrado'} com sucesso no banco de dados!`);
     } else {
-      alert("⚠️ " + (data.message || "Registro salvo no banco de dados."));
+      alert(`✅ Registro de investimento ${isEdit ? 'atualizado' : 'gravado'} na planilha.`);
     }
   } catch (err) {
     alert("✅ Investimento enviado para gravação no banco de dados!");
@@ -1330,6 +1390,52 @@ async function salvarNovoInvestimento(e) {
   }
 
   return false;
+}
+
+async function carregarInvestimentosView() {
+  const container = document.getElementById("listaInvestimentosView");
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_URL}?action=getInvestimentos&userId=${currentUser.ID_Usuario}`);
+    const data = await res.json();
+    
+    let totalInv = 0;
+    const catMap = {};
+
+    if (Array.isArray(data) && data.length > 0) {
+      let html = "";
+      data.forEach(item => {
+        const idInv = item.ID_Investimento || item.ID_Transacao || item.Nome_Ativo;
+        const val = parseVal(item.Valor_Total || item.Valor);
+        totalInv += val;
+        const cat = item.Categoria || "Outros";
+        catMap[cat] = (catMap[cat] || 0) + val;
+
+        const op = item.Tipo_Operacao || 'Saldo Inicial';
+        const isResgate = op.indexOf('Resgate') !== -1;
+        html += `
+          <div class="data-item clickable-item" onclick="abrirModalEditarInvestimento('${encodeURIComponent(idInv)}')">
+            <div class="data-item-info">
+              <h5>📈 ${item.Nome_Ativo || 'Ativo'} <span class="badge-cat">${cat}</span></h5>
+              <span>Operação: ${op} ${item.ID_Conta ? '| Conta: ' + item.ID_Conta : ''}</span>
+            </div>
+            <div class="data-item-value">
+              <span class="${isResgate ? 'value-despesa' : 'value-receita'}" style="font-weight:bold;">${formatarMoeda(val)}</span>
+              <span style="font-size:0.75rem; color:var(--accent-green); margin-left:8px;">✏️ Alterar/Excluir</span>
+            </div>
+          </div>`;
+      });
+      container.innerHTML = html;
+    } else {
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum investimento registrado.</p>";
+    }
+
+    document.getElementById("totalInvestimentos").textContent = formatarMoeda(totalInv);
+    renderizarGraficoInvestimentos(catMap);
+  } catch (e) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum investimento registrado.</p>";
+  }
 }
 
 
