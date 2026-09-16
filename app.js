@@ -431,7 +431,7 @@ async function carregarReceitasView() {
       data.forEach(item => {
         const idTrans = item.ID_Transacao || item.Descricao;
         html += `
-          <div class="data-item clickable-item" onclick="deletarReceita('${idTrans}', this.querySelector('.btn-delete-icon'))">
+          <div class="data-item clickable-item" onclick="deletarReceita('${encodeURIComponent(idTrans)}', this.querySelector('.btn-delete-icon'))">
             <div class="data-item-info">
               <h5>💰 ${item.Descricao || 'Receita'}</h5>
               <span>Data: ${item.Data_Fato || '-'} | Categoria: ${item.Origem_Receita || item["Origem da Receita"] || 'Geral'}</span>
@@ -439,7 +439,7 @@ async function carregarReceitasView() {
             </div>
             <div class="data-item-value">
               <span class="value-receita" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
-              <button class="btn-delete-icon" onclick="event.stopPropagation(); deletarReceita('${idTrans}', this)" title="Excluir Receita">✕</button>
+              <button class="btn-delete-icon" onclick="event.stopPropagation(); deletarReceita('${encodeURIComponent(idTrans)}', this)" title="Excluir Receita">✕</button>
             </div>
           </div>`;
       });
@@ -467,7 +467,7 @@ async function carregarDespesasView() {
       data.forEach(item => {
         const idTrans = item.ID_Transacao || item.Descricao;
         html += `
-          <div class="data-item clickable-item" onclick="deletarDespesa('${idTrans}', this.querySelector('.btn-delete-icon'))">
+          <div class="data-item clickable-item" onclick="deletarDespesa('${encodeURIComponent(idTrans)}', this.querySelector('.btn-delete-icon'))">
             <div class="data-item-info">
               <h5>💸 ${item.Descricao || 'Despesa'}</h5>
               <span>Data: ${item.Data_Fato || '-'} | Pagamento: ${item.Forma_Pagamento || 'Débito'}</span>
@@ -475,7 +475,7 @@ async function carregarDespesasView() {
             </div>
             <div class="data-item-value">
               <span class="value-despesa" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
-              <button class="btn-delete-icon" onclick="event.stopPropagation(); deletarDespesa('${idTrans}', this)" title="Excluir Despesa">✕</button>
+              <button class="btn-delete-icon" onclick="event.stopPropagation(); deletarDespesa('${encodeURIComponent(idTrans)}', this)" title="Excluir Despesa">✕</button>
             </div>
           </div>`;
       });
@@ -562,7 +562,7 @@ async function carregarContasView() {
             </div>
             <div class="data-item-value">
               <span class="value-receita" style="font-weight:bold;">${formatarMoeda(saldo)}</span>
-              <button class="btn-delete-icon" onclick="deletarConta('${idTrans}')">✕</button>
+              <button class="btn-delete-icon" onclick="deletarConta('${encodeURIComponent(idTrans)}')">✕</button>
             </div>
           </div>`;
       }
