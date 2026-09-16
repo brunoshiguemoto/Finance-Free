@@ -1,5 +1,18 @@
+function extractDateFromId(idStr) {
+  if (!idStr) return "";
+  const match = String(idStr).match(/\d{13}/);
+  if (match) {
+    const ts = parseInt(match[0], 10);
+    if (!isNaN(ts) && ts > 1000000000000) {
+      const d = new Date(ts);
+      return d.toISOString().substring(0, 10);
+    }
+  }
+  return "";
+}
+
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 34.0
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 35.0
 // Arquivo: app.js
 // Descrição: Suporte total a tratamento de moedas ("R$ 100,00"), gráfico de barras
 //            horizontais (Resumo Orçamentário), menu Tipo_Gasto com vínculo automático
