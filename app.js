@@ -355,6 +355,9 @@ function mudarMes(delta) {
   currentMonthDate.setMonth(currentMonthDate.getMonth() + delta);
   atualizarDisplayMes();
   carregarDashboard();
+  carregarReceitasView();
+  carregarDespesasView();
+  carregarInvestimentosView();
 }
 
 function getMesAnoFormatado() {
@@ -1409,45 +1412,128 @@ async function carregarInvestimentosView() {
   const container = document.getElementById("listaInvestimentosView");
   if (!container) return;
 
+  if (!currentUser || !currentUser.ID_Usuario) {
+    const savedUser = localStorage.getItem("finance_free_user");
+    if (savedUser) {
+      try { currentUser = JSON.parse(savedUser); } catch (e) {}
+    }
+  }
+
+  if (!currentUser || !currentUser.ID_Usuario) {
+    container.innerHTML = "<p style='color:#94a3b8;'>Sessão não identificada. Faça login novamente.</p>";
+    return;
+  }
+
+  container.innerHTML = "<p style='color:#94a3b8;'>Carregando investimentos...</p>";
+
   try {
     const res = await fetch(`${API_URL}?action=getInvestimentos&userId=${currentUser.ID_Usuario}`);
-    const data = await res.json();
+    const rawData = await res.json();
     
-    let totalInv = 0;
+    let invList = [];
+    if (Array.isArray(rawData)) {
+      invList = rawData;
+    } else if (rawData && Array.isArray(rawData.data)) {
+      invList = rawData.data;
+    } else if (rawData && Array.isArray(rawData.result)) {
+      invList = rawData.result;
+    }
+
+    const mesAnoAtual = getMesAnoFormatado(); // Ex: "2026-09"
+    let totalAcumulado = 0;
+    let totalMes = 0;
     const catMap = {};
 
-    if (Array.isArray(data) && data.length > 0) {
-      let html = "";
-      data.forEach(item => {
-        const idInv = item.ID_Investimento || item.ID_Transacao || item.Nome_Ativo;
-        const val = parseVal(item.Valor_Total || item.Valor);
-        totalInv += val;
-        const cat = item.Categoria || "Outros";
-        catMap[cat] = (catMap[cat] || 0) + val;
+    if (invList.length > 0) {
+      // Ordenar decrescente por data/ID
+      invList.sort((a, b) => {
+        const dA = String(a.Data_Fato || extractDateFromId(a.ID_Investimento || a.ID_Transacao) || '');
+        const dB = String(b.Data_Fato || extractDateFromId(b.ID_Investimento || b.ID_Transacao) || '');
+        return dB.localeCompare(dA);
+      });
 
-        const op = item.Tipo_Operacao || 'Saldo Inicial';
-        const isResgate = op.indexOf('Resgate') !== -1;
+      let html = "";
+      invList.forEach(item => {
+        const idInv = item.ID_Investimento || item.ID_Transacao || item.ID || item.Nome_Ativo;
+        const val = parseVal(item.Valor_Total !== undefined ? item.Valor_Total : (item.Valor !== undefined ? item.Valor : item["Valor_Total"]));
+        const nomeAtivo = item.Nome_Ativo || item["Nome do Ativo"] || item.Ativo || item.Descricao || "Ativo sem nome";
+        const cat = item.Categoria || item["Categoria do Investimento"] || item.Tipo_Ativo || "Tesouro Direto";
+        const op = item.Tipo_Operacao || item["Tipo de Operação"] || item.Operacao || "Saldo Inicial";
+
+        // Extrair ou formatar data_fato
+        let rawDataFato = String(item.Data_Fato || item.Data || item.Data_Cadastro || '').trim();
+        if (!rawDataFato || rawDataFato.length < 8) {
+          rawDataFato = extractDateFromId(idInv) || new Date().toISOString().substring(0, 10);
+        }
+
+        // Formatar para AAAA-MM-DD
+        let yyyyMmDd = rawDataFato;
+        if (rawDataFato.indexOf('/') !== -1) {
+          const p = rawDataFato.split('/');
+          if (p.length === 3) {
+            yyyyMmDd = `${p[2]}-${String(p[1]).padStart(2, '0')}-${String(p[0]).padStart(2, '0')}`;
+          }
+        } else if (rawDataFato.length >= 10) {
+          yyyyMmDd = rawDataFato.substring(0, 10);
+        }
+
+        const dataFormatadaBR = formatDateBR(yyyyMmDd);
+        const mesAnoItem = yyyyMmDd.length >= 7 ? yyyyMmDd.substring(0, 7) : "";
+
+        const isResgate = op.indexOf("Resgate") !== -1;
+
+        // Totalizador Acumulado (Histórico de toda a carteira)
+        if (isResgate) {
+          totalAcumulado -= val;
+        } else {
+          totalAcumulado += val;
+        }
+
+        // Totalizador do Mês Ativo
+        if (mesAnoItem === mesAnoAtual) {
+          if (isResgate) {
+            totalMes -= val;
+          } else {
+            totalMes += val;
+          }
+        }
+
+        // Categoria para gráfico de pizza
+        if (!isResgate) {
+          catMap[cat] = (catMap[cat] || 0) + val;
+        }
+
+        // Item HTML
         html += `
           <div class="data-item clickable-item" onclick="abrirModalEditarInvestimento('${encodeURIComponent(idInv)}')">
             <div class="data-item-info">
-              <h5>📈 ${item.Nome_Ativo || 'Ativo'} <span class="badge-cat">${cat}</span></h5>
-              <span>Operação: ${op} ${item.ID_Conta ? '| Conta: ' + item.ID_Conta : ''}</span>
+              <h5>📈 ${nomeAtivo} <span class="badge-cat">${cat}</span></h5>
+              <span>📅 Data: <strong>${dataFormatadaBR}</strong> | 📋 Operação: ${op} ${item.ID_Conta ? '| Conta: ' + item.ID_Conta : ''}</span>
+              ${item.Observacoes ? `<br><small style="color:#64748b;">Obs: ${item.Observacoes}</small>` : ''}
             </div>
             <div class="data-item-value">
-              <span class="${isResgate ? 'value-despesa' : 'value-receita'}" style="font-weight:bold;">${formatarMoeda(val)}</span>
+              <span class="${isResgate ? 'value-despesa' : 'value-receita'}" style="font-weight:bold; font-size:1.1rem;">${formatarMoeda(val)}</span>
               <span style="font-size:0.75rem; color:var(--accent-green); margin-left:8px;">✏️ Alterar/Excluir</span>
             </div>
           </div>`;
       });
+
       container.innerHTML = html;
     } else {
       container.innerHTML = "<p style='color:#94a3b8;'>Nenhum investimento registrado.</p>";
     }
 
-    document.getElementById("totalInvestimentos").textContent = formatarMoeda(totalInv);
+    // Atualizar cartões na tela
+    const elemAcumulado = document.getElementById("totalInvestimentos") || document.getElementById("totalPatrimonioInvest");
+    if (elemAcumulado) elemAcumulado.textContent = formatarMoeda(totalAcumulado);
+
+    const elemMes = document.getElementById("totalInvestimentosMes");
+    if (elemMes) elemMes.textContent = formatarMoeda(totalMes);
+
     renderizarGraficoInvestimentos(catMap);
   } catch (e) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum investimento registrado.</p>";
+    console.error("Erro ao carregar investimentos:", e);
+    container.innerHTML = "<p style='color:#94a3b8;'>Erro ao carregar investimentos.</p>";
   }
 }
 
