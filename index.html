@@ -299,16 +299,18 @@
   </aside>
 
   <!-- BOTÃO FLUTUANTE (+ CANTO INFERIOR ESQUERDO) -->
-  <button class="btn-floating-add" id="btnFloatingAdd" onclick="abrirModal('modalLancamento')" style="display:none;">+</button>
+  <button class="btn-floating-add" id="btnFloatingAdd" onclick="abrirModalNovoLancamento()" style="display:none;">+</button>
 
   <!-- MODAL: NOVO LANÇAMENTO (+) -->
   <div class="modal-overlay" id="modalLancamento">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Novo Lançamento</h3>
+        <h3 class="modal-title" id="modalLancamentoTitle">Novo Lançamento</h3>
         <button class="close-btn" onclick="fecharModal('modalLancamento')">✕</button>
       </div>
       <form onsubmit="salvarLancamento(event)">
+        <input type="hidden" id="inputTransacaoId">
+        
         <div class="form-group">
           <label>Tipo de Transação</label>
           <select class="form-control" id="tipoLancamento" onchange="toggleTipoLancamento()">
@@ -384,7 +386,10 @@
           <textarea class="form-control" id="inputObservacoes" rows="2" placeholder="Explicação do lançamento..."></textarea>
         </div>
 
-        <button type="submit" class="btn-submit">Salvar Lançamento</button>
+        <div class="modal-footer-buttons" style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" class="btn-submit" id="btnSalvarLancamento" style="flex: 1;">💾 Salvar Lançamento</button>
+          <button type="button" class="btn-submit" id="btnExcluirLancamento" style="flex: 1; background-color: #ef4444; display: none;" onclick="executarExclusaoLancamentoAtual()">🗑️ Excluir Registro</button>
+        </div>
       </form>
     </div>
   </div>
