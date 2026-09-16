@@ -1,3 +1,9 @@
+// ============================================================================
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 37.0
+// Arquivo: app.js
+// Descrição: Gerenciamento total de investimentos acumulados e do mês, gráfico de barras
+//            amarelo, gráfico de pizza sem verde e controle de navegação de meses.
+// ============================================================================
 function extractDateFromId(idStr) {
   if (!idStr) return "";
   const match = String(idStr).match(/\d{13}/);
@@ -12,7 +18,7 @@ function extractDateFromId(idStr) {
 }
 
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 36.0
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 37.0
 // Arquivo: app.js
 // Descrição: Suporte total a tratamento de moedas ("R$ 100,00"), gráfico de barras
 //            horizontais (Resumo Orçamentário), menu Tipo_Gasto com vínculo automático
@@ -27,7 +33,7 @@ let despesasChartInstance = null;
 let resumoBarrasChartInstance = null;
 let saudeChartInstance = null;
 
-console.log("🚀 Finance Free Frontend v29.0 Inicializado!");
+console.log("🚀 Finance Free Frontend v37.0 Inicializado!");
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
@@ -41,6 +47,19 @@ function parseVal(v) {
   const num = parseFloat(str);
   return isNaN(num) ? 0.0 : num;
 }
+function formatDateBR(dateStr) {
+  if (!dateStr) return "";
+  const s = String(dateStr).trim();
+  if (s.indexOf('/') !== -1) return s;
+  if (s.indexOf('-') !== -1) {
+    const parts = s.split('T')[0].split('-');
+    if (parts.length === 3) {
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
+  }
+  return s;
+}
+
 
 // Trata datas ("2026-09-16", "16/09/2026", Date) para "YYYY-MM"
 function formatDateToYYYYMM(d) {
