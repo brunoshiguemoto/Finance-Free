@@ -37,7 +37,7 @@ function carregarSelectBancos(selectId) {
 }
 
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 15.0 (ESPECIALISTA)
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 25.0 (PREVENÇÃO DE RELOAD & AUTENTICAÇÃO INFALÍVEL)
 // Arquivo: app.js
 // Descrição: Bloqueio Total de Acesso sem Login, Zero Dados Mockados/Default,
 //            Autenticação Rígida por ID_Usuario e Suporte a Convidados com ID_Titular.
@@ -136,22 +136,30 @@ function validarSenhaForte(senha) {
 }
 
 async function realizarLoginSubmit(e) {
-  e.preventDefault();
-  const form = e.target;
-  const btn = document.getElementById("btnLoginSubmit") || form.querySelector('button[type="submit"]');
+  if (e) {
+    e.preventDefault();
+    if (typeof e.stopPropagation === "function") e.stopPropagation();
+  }
 
-  const email = document.getElementById("loginEmailInput").value.trim();
-  const senha = document.getElementById("loginSenhaInput").value.trim();
+  const form = document.getElementById("formLoginTab");
+  const btn = document.getElementById("btnLoginSubmit") || (form ? form.querySelector('button[type="submit"]') : null);
+
+  const emailElem = document.getElementById("loginEmailInput");
+  const senhaElem = document.getElementById("loginSenhaInput");
+
+  const email = emailElem ? emailElem.value.trim() : "";
+  const senha = senhaElem ? senhaElem.value.trim() : "";
 
   if (!email || !senha) {
     alert("Por favor, preencha o e-mail e a senha.");
-    return;
+    return false;
   }
 
   setButtonLoading(btn, true, "Verificando...");
 
   try {
-    const res = await fetch(`${API_URL}?action=login&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`);
+    const loginUrl = `${API_URL}?action=login&email=${encodeURIComponent(email)}&senha=${encodeURIComponent(senha)}`;
+    const res = await fetch(loginUrl);
     const data = await res.json();
 
     if (data.status === "success" && data.user) {
@@ -159,17 +167,19 @@ async function realizarLoginSubmit(e) {
       localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
       alert(`✅ Login realizado com sucesso! Bem-vindo(a), ${currentUser.Nome_Completo}`);
       
-      if (typeof form.reset === "function") form.reset();
       verificarSessao();
       carregarDashboard();
     } else {
-      alert("❌ E-mail ou senha incorretos. Tente novamente.");
+      alert("❌ " + (data.message || "E-mail ou senha incorretos. Tente novamente."));
     }
   } catch (err) {
-    alert("❌ Erro ao conectar com o servidor.");
+    console.error("Erro no login:", err);
+    alert("❌ Erro ao conectar com o servidor. Tente novamente em instantes.");
   } finally {
     setButtonLoading(btn, false);
   }
+
+  return false;
 }
 
 async function realizarCadastroSubmit(e) {
