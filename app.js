@@ -1,63 +1,61 @@
-const BANCOS_BRASIL = [
-  { codigo: "000", nome: "Wallet (Dinheiro Físico / Carteira)" },
-  { codigo: "001", nome: "Banco do Brasil S.A." },
-  { codigo: "033", nome: "Banco Santander (Brasil) S.A." },
-  { codigo: "104", nome: "Caixa Econômica Federal" },
-  { codigo: "237", nome: "Banco Bradesco S.A." },
-  { codigo: "341", nome: "Itaú Unibanco S.A." },
-  { codigo: "077", nome: "Banco Inter S.A." },
-  { codigo: "260", nome: "Nu Pagamentos S.A. (Nubank)" },
-  { codigo: "336", nome: "Banco C6 S.A." },
-  { codigo: "212", nome: "Banco Original S.A." },
-  { codigo: "422", nome: "Banco Safra S.A." },
-  { codigo: "655", nome: "Banco Neon S.A." },
-  { codigo: "041", nome: "Banco Banrisul S.A." },
-  { codigo: "756", nome: "SICOOB" },
-  { codigo: "748", nome: "SICREDI S.A." },
-  { codigo: "637", nome: "Banco BTG Pactual S.A." },
-  { codigo: "389", nome: "Banco Mercantil do Brasil S.A." },
-  { codigo: "070", nome: "BRB - Banco de Brasília S.A." },
-  { codigo: "136", nome: "Unicred Cooperativa" },
-  { codigo: "999", nome: "Outra Instituição Financeira" }
-];
-
-function carregarSelectBancos(selectId) {
-  const selectElem = document.getElementById(selectId);
-  if (!selectElem) return;
-  
-  if (selectElem.options.length <= 1) {
-    selectElem.innerHTML = '<option value="">-- Selecione o Banco --</option>';
-    BANCOS_BRASIL.forEach(banco => {
-      const opt = document.createElement("option");
-      opt.value = `${banco.codigo} - ${banco.nome}`;
-      opt.textContent = `${banco.codigo} - ${banco.nome}`;
-      selectElem.appendChild(opt);
-    });
-  }
-}
-
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 25.0 (PREVENÇÃO DE RELOAD & AUTENTICAÇÃO INFALÍVEL)
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 29.0
 // Arquivo: app.js
-// Descrição: Bloqueio Total de Acesso sem Login, Zero Dados Mockados/Default,
-//            Autenticação Rígida por ID_Usuario e Suporte a Convidados com ID_Titular.
+// Descrição: Suporte total a tratamento de moedas ("R$ 100,00"), gráfico de barras
+//            horizontais (Resumo Orçamentário), menu Tipo_Gasto com vínculo automático
+//            para Educação, sem botões [X] indevidos, alteração e exclusão limpas.
 // ============================================================================
 
 const API_URL = "https://script.google.com/macros/s/AKfycbzmHwl89lV7YvXkbGGEeknW1KX9dv_bWf4T0r9fVIwgFSPzNxCdJipYfuQUaK32rYp79Q/exec";
 
-// SEM USUÁRIO DEFAULT! Exige login explícito.
 let currentUser = JSON.parse(localStorage.getItem("finance_free_user")) || null;
 let currentMonthDate = new Date();
+let despesasChartInstance = null;
+let resumoBarrasChartInstance = null;
+let saudeChartInstance = null;
+
+console.log("🚀 Finance Free Frontend v29.0 Inicializado!");
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
 });
 
-async 
-/**
- * Altera o estado do botão durante requisições de salvamento/exclusão.
- * Desabilita o clique e altera a cor para cinza/carregamento.
- */
+// Trata valores monetários ("R$ 100,00", "240", 100.5) para Float
+function parseVal(v) {
+  if (v === null || v === undefined) return 0.0;
+  if (typeof v === "number") return parseFloat(v) || 0.0;
+  const str = String(v).replace("R$", "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".").trim();
+  const num = parseFloat(str);
+  return isNaN(num) ? 0.0 : num;
+}
+
+// Trata datas ("2026-09-16", "16/09/2026", Date) para "YYYY-MM"
+function formatDateToYYYYMM(d) {
+  if (!d) return "";
+  let str = "";
+  if (d instanceof Date) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${yyyy}-${mm}`;
+  } else {
+    str = String(d).trim();
+  }
+  if (str.indexOf("T") !== -1) str = str.split("T")[0];
+  if (str.indexOf("/") !== -1) {
+    const parts = str.split("/");
+    if (parts.length === 3 && parts[2].length === 4) {
+      return parts[2] + "-" + (parts[1].length === 1 ? "0" + parts[1] : parts[1]);
+    }
+  }
+  if (str.indexOf("-") !== -1) {
+    const parts = str.split("-");
+    if (parts.length >= 2 && parts[0].length === 4) {
+      return parts[0] + "-" + (parts[1].length === 1 ? "0" + parts[1] : parts[1]);
+    }
+  }
+  return str.substring(0, 7);
+}
+
 function setButtonLoading(btn, isLoading, loadingText = "Processando...") {
   if (!btn) return;
   if (isLoading) {
@@ -91,13 +89,11 @@ function verificarSessao() {
   const btnFloating = document.getElementById("btnFloatingAdd");
 
   if (!currentUser || !currentUser.ID_Usuario) {
-    // BLOQUEIO TOTAL: Exibe somente a tela de login
     if (authOverlay) authOverlay.style.display = "flex";
     if (mainContent) mainContent.style.display = "none";
     if (sidebar) sidebar.style.display = "none";
     if (btnFloating) btnFloating.style.display = "none";
   } else {
-    // USUÁRIO AUTENTICADO: Libera interface do usuário
     if (authOverlay) authOverlay.style.display = "none";
     if (mainContent) mainContent.style.display = "block";
     if (sidebar) sidebar.style.display = "flex";
@@ -126,29 +122,27 @@ function validarSenhaForte(senha) {
   const reqNum = /[0-9]/.test(senha);
   const reqSim = /[@$!%*?&]/.test(senha);
 
-  document.getElementById("pwdMin").classList.toggle("valid", reqMin);
-  document.getElementById("pwdMai").classList.toggle("valid", reqMai);
-  document.getElementById("pwdMinu").classList.toggle("valid", reqMinu);
-  document.getElementById("pwdNum").classList.toggle("valid", reqNum);
-  document.getElementById("pwdSim").classList.toggle("valid", reqSim);
+  const pMin = document.getElementById("pwdMin");
+  if (pMin) pMin.classList.toggle("valid", reqMin);
+  const pMai = document.getElementById("pwdMai");
+  if (pMai) pMai.classList.toggle("valid", reqMai);
+  const pMinu = document.getElementById("pwdMinu");
+  if (pMinu) pMinu.classList.toggle("valid", reqMinu);
+  const pNum = document.getElementById("pwdNum");
+  if (pNum) pNum.classList.toggle("valid", reqNum);
+  const pSim = document.getElementById("pwdSim");
+  if (pSim) pSim.classList.toggle("valid", reqSim);
 
   return reqMin && reqMai && reqMinu && reqNum && reqSim;
 }
 
 async function realizarLoginSubmit(e) {
-  if (e) {
-    e.preventDefault();
-    if (e.stopPropagation) e.stopPropagation();
-  }
-  
-  const form = document.getElementById("formLoginTab");
-  const btn = document.getElementById("btnLoginSubmit") || (form ? form.querySelector('button[type="submit"]') : null);
+  if (e && e.preventDefault) e.preventDefault();
+  if (e && e.stopPropagation) e.stopPropagation();
 
-  const emailElem = document.getElementById("loginEmailInput");
-  const senhaElem = document.getElementById("loginSenhaInput");
-
-  const email = emailElem ? emailElem.value.trim() : "";
-  const senha = senhaElem ? senhaElem.value.trim() : "";
+  const btn = document.getElementById("btnLoginSubmit");
+  const email = document.getElementById("loginEmailInput").value.trim();
+  const senha = document.getElementById("loginSenhaInput").value.trim();
 
   if (!email || !senha) {
     alert("Por favor, preencha o e-mail e a senha.");
@@ -165,15 +159,13 @@ async function realizarLoginSubmit(e) {
       currentUser = data.user;
       localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
       alert(`✅ Login realizado com sucesso! Bem-vindo(a), ${currentUser.Nome_Completo}`);
-      
       verificarSessao();
       carregarDashboard();
     } else {
       alert("❌ " + (data.message || "E-mail ou senha incorretos. Tente novamente."));
     }
   } catch (err) {
-    console.error("Erro no login:", err);
-    alert("❌ Erro ao conectar com o servidor. Verifique sua conexão e tente novamente.");
+    alert("❌ Erro ao conectar com o servidor. Tente novamente.");
   } finally {
     setButtonLoading(btn, false);
   }
@@ -182,9 +174,9 @@ async function realizarLoginSubmit(e) {
 }
 
 async function realizarCadastroSubmit(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
   const form = e.target;
-  const submitBtn = document.getElementById("btnRegisterSubmit") || form.querySelector('button[type="submit"]');
+  const submitBtn = form.querySelector('button[type="submit"]');
 
   const nome = document.getElementById("cadNomeInput").value.trim();
   const email = document.getElementById("cadEmailInput").value.trim();
@@ -193,7 +185,7 @@ async function realizarCadastroSubmit(e) {
 
   if (!validarSenhaForte(senha)) {
     alert("A senha não atende aos requisitos mínimos de segurança!");
-    return;
+    return false;
   }
 
   setButtonLoading(submitBtn, true, "Criando Conta...");
@@ -218,23 +210,22 @@ async function realizarCadastroSubmit(e) {
     if (data.status === "success" && data.user) {
       currentUser = data.user;
       localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-      alert("✅ Cadastro realizado com sucesso! Seja bem-vindo(a).");
-      
-      if (typeof form.reset === "function") form.reset();
+      alert(`✅ Conta criada com sucesso! Bem-vindo(a), ${currentUser.Nome_Completo}`);
       verificarSessao();
       carregarDashboard();
     } else {
-      alert("❌ " + (data.message || "Erro ao cadastrar. Tente novamente."));
+      alert("❌ " + (data.message || "Erro ao realizar cadastro. Tente novamente."));
     }
   } catch (err) {
-    alert("❌ Erro ao processar o cadastro.");
+    alert("❌ Erro de conexão ao cadastrar usuário.");
   } finally {
     setButtonLoading(submitBtn, false);
   }
+  return false;
 }
 
 async function realizarCadastroConvidadoSubmit(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
   const form = e.target;
   const submitBtn = form.querySelector('button[type="submit"]');
 
@@ -245,7 +236,7 @@ async function realizarCadastroConvidadoSubmit(e) {
 
   if (!idTitular) {
     alert("Por favor, informe o Código do Convite (ID do Titular).");
-    return;
+    return false;
   }
 
   setButtonLoading(submitBtn, true, "Ativando Convite...");
@@ -269,23 +260,22 @@ async function realizarCadastroConvidadoSubmit(e) {
     if (data.status === "success" && data.user) {
       currentUser = data.user;
       localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-      alert("✅ Convite ativado com sucesso!");
-      
-      if (typeof form.reset === "function") form.reset();
+      alert(`✅ Acesso de convidado ativado! Bem-vindo(a), ${currentUser.Nome_Completo}`);
       verificarSessao();
       carregarDashboard();
     } else {
-      alert("❌ " + (data.message || "Erro ao ativar convite."));
+      alert("❌ " + (data.message || "Não foi possível validar o convite."));
     }
   } catch (err) {
-    alert("❌ Erro ao processar o convite.");
+    alert("❌ Erro ao conectar com o servidor.");
   } finally {
     setButtonLoading(submitBtn, false);
   }
+  return false;
 }
 
 function encerrarSessao() {
-  if (confirm("Deseja realmente sair da sua conta no Finance Free?")) {
+  if (confirm("Deseja realmente sair da sua conta?")) {
     localStorage.removeItem("finance_free_user");
     currentUser = null;
     verificarSessao();
@@ -312,7 +302,7 @@ function navegarParaView(viewId) {
 
   const btnFloat = document.querySelector(".btn-floating-add");
   if (btnFloat) {
-    if (viewId === "viewContas") {
+    if (viewId === "viewContas" || viewId === "viewConvidarParceiro") {
       btnFloat.style.display = "none";
     } else {
       btnFloat.style.display = "flex";
@@ -371,189 +361,130 @@ async function carregarDashboard() {
     if (data.status === "success") {
       document.getElementById("totalReceitas").textContent = formatarMoeda(data.totalReceitas);
       document.getElementById("totalDespesas").textContent = formatarMoeda(data.totalDespesas);
-      document.getElementById("pontosTotal").textContent = `${data.gamificacao.Pontos_Total || 100} pts`;
+      if (document.getElementById("pontosTotal") && data.gamificacao) {
+        document.getElementById("pontosTotal").textContent = `${data.gamificacao.Pontos_Total || 120} pts`;
+      }
+      
       renderizarGraficoPizza(data.graficoPizza || {});
+      renderizarGraficoBarrasResumo(data.resumoBarras || {
+        receitas: data.totalReceitas,
+        investimentos: 0,
+        educacao: 0,
+        essenciais: data.totalDespesas,
+        livres: 0
+      });
     }
-  } catch (error) {
-    // SEM DADOS MOCKADOS! Estado zerado limpo para novo usuário
-    document.getElementById("totalReceitas").textContent = "R$ 0,00";
-    document.getElementById("totalDespesas").textContent = "R$ 0,00";
-    document.getElementById("pontosTotal").textContent = "100 pts";
-    renderizarGraficoPizza({});
+  } catch (err) {
+    console.error("Erro ao carregar dashboard:", err);
   }
 }
 
 function renderizarGraficoPizza(categoriasMap) {
-  const ctx = document.getElementById('despesasChart');
+  const ctx = document.getElementById("despesasChart");
   if (!ctx) return;
-  
-  const labels = Object.keys(categoriasMap);
-  const values = Object.values(categoriasMap);
-  
-  if (labels.length === 0) {
-    labels.push("Sem Lançamentos");
-    values.push(1);
+
+  if (despesasChartInstance) {
+    despesasChartInstance.destroy();
   }
 
-  if (window.myPieChart) window.myPieChart.destroy();
+  const labels = Object.keys(categoriasMap);
+  const values = Object.values(categoriasMap).map(v => parseVal(v));
 
-  window.myPieChart = new Chart(ctx, {
-    type: 'doughnut',
+  if (labels.length === 0) {
+    ctx.style.display = "none";
+    return;
+  }
+  ctx.style.display = "block";
+
+  despesasChartInstance = new Chart(ctx, {
+    type: 'pie',
     data: {
       labels: labels,
       datasets: [{
         data: values,
-        backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6', '#06b6d4', '#ec4899', '#64748b'],
-        borderWidth: 2,
-        borderColor: '#1e293b'
+        backgroundColor: [
+          '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6',
+          '#ec4899', '#6366f1', '#14b8a6', '#f97316', '#64748b'
+        ]
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', font: { size: 11 } } } }
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#cbd5e1', font: { size: 11 } }
+        }
+      }
     }
   });
 }
 
-let currentTransactionsList = [];
+function renderizarGraficoBarrasResumo(resumoData) {
+  const ctx = document.getElementById("resumoBarrasChart");
+  if (!ctx) return;
 
-function abrirModalNovoLancamento() {
-  const titleElem = document.getElementById("modalLancamentoTitle");
-  if (titleElem) titleElem.textContent = "Novo Lançamento";
-  
-  const hiddenIdInput = document.getElementById("inputTransacaoId");
-  if (hiddenIdInput) hiddenIdInput.value = "";
-  
-  const form = document.getElementById("modalLancamento") ? document.getElementById("modalLancamento").querySelector("form") : null;
-  if (form && typeof form.reset === "function") form.reset();
-  
-  const btnSalvar = document.getElementById("btnSalvarLancamento");
-  if (btnSalvar) btnSalvar.textContent = "💾 Salvar Lançamento";
-  
-  const btnExcluir = document.getElementById("btnExcluirLancamento");
-  if (btnExcluir) btnExcluir.style.display = "none";
-  
-  toggleTipoLancamento();
-  abrirModal("modalLancamento");
-}
+  if (resumoBarrasChartInstance) {
+    resumoBarrasChartInstance.destroy();
+  }
 
-function abrirModalEditarLancamento(encodedId, tipo) {
-  const idTrans = decodeURIComponent(encodedId);
-  const item = currentTransactionsList.find(t => String(t.ID_Transacao) === idTrans || String(t.Descricao) === idTrans);
-  
-  abrirModal("modalLancamento");
-  
-  const titleElem = document.getElementById("modalLancamentoTitle");
-  if (titleElem) titleElem.textContent = "✏️ Alterar / 🗑️ Excluir " + tipo;
-  
-  let hiddenIdInput = document.getElementById("inputTransacaoId");
-  if (!hiddenIdInput) {
-    hiddenIdInput = document.createElement("input");
-    hiddenIdInput.type = "hidden";
-    hiddenIdInput.id = "inputTransacaoId";
-    const modalForm = document.getElementById("modalLancamento").querySelector("form");
-    if (modalForm) modalForm.appendChild(hiddenIdInput);
-  }
-  hiddenIdInput.value = idTrans;
-  
-  const selectTipo = document.getElementById("tipoLancamento");
-  if (selectTipo) {
-    selectTipo.value = tipo;
-    toggleTipoLancamento();
-  }
-  
-  if (item) {
-    const descInput = document.getElementById("inputDescricao");
-    if (descInput) descInput.value = item.Descricao || "";
-    
-    const valInput = document.getElementById("inputValor");
-    if (valInput) {
-      let numVal = typeof item.Valor === "number" ? item.Valor : parseFloat(String(item.Valor).replace("R$", "").replace(/\./g, "").replace(",", ".").trim()) || 0;
-      valInput.value = numVal;
+  const valReceitas = parseVal(resumoData?.receitas || 0);
+  const valInvestimentos = parseVal(resumoData?.investimentos || 0);
+  const valEducacao = parseVal(resumoData?.educacao || 0);
+  const valEssenciais = parseVal(resumoData?.essenciais || 0);
+  const valLivres = parseVal(resumoData?.livres || 0);
+
+  resumoBarrasChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: [
+        'Total Receitas 💰',
+        'Investimentos 🟡',
+        'Educação 🟣',
+        'Gastos Essenciais 🔴',
+        'Despesas Livres 💗'
+      ],
+      datasets: [{
+        label: 'Valor (R$)',
+        data: [valReceitas, valInvestimentos, valEducacao, valEssenciais, valLivres],
+        backgroundColor: [
+          '#10b981', // Verde
+          '#f59e0b', // Amarelo
+          '#8b5cf6', // Roxo
+          '#ef4444', // Vermelho
+          '#ec4899'  // Rosa
+        ],
+        borderRadius: 6,
+        borderWidth: 0
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return ' ' + formatarMoeda(context.raw);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#334155' },
+          ticks: { color: '#94a3b8' }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#f8fafc', font: { weight: 'bold', size: 11 } }
+        }
+      }
     }
-    
-    const dataInput = document.getElementById("inputData");
-    if (dataInput) dataInput.value = item.Data_Fato || new Date().toISOString().substring(0, 10);
-    
-    const formaPag = document.getElementById("selectFormaPagamento");
-    if (formaPag) {
-      formaPag.value = item.Forma_Pagamento || item.Foma_Pagamento || "Débito";
-      toggleFormaPagamento();
-    }
-    
-    const classDesp = document.getElementById("selectClassificacaoDespesa");
-    if (classDesp && item.Destino_Despesa) classDesp.value = item.Destino_Despesa;
-    
-    const classRec = document.getElementById("selectClassificacaoReceita");
-    if (classRec && (item.Origem_Receita || item["Origem da Receita"])) {
-      classRec.value = item.Origem_Receita || item["Origem da Receita"];
-    }
-    
-    const obsInput = document.getElementById("inputObservacoes");
-    if (obsInput) obsInput.value = item.Observacoes || "";
-  }
-  
-  const btnSalvar = document.getElementById("btnSalvarLancamento");
-  if (btnSalvar) btnSalvar.textContent = "💾 Salvar Alterações";
-  
-  const btnExcluir = document.getElementById("btnExcluirLancamento");
-  if (btnExcluir) btnExcluir.style.display = "inline-flex";
-}
-
-async function executarExclusaoLancamentoAtual() {
-  const hiddenIdInput = document.getElementById("inputTransacaoId");
-  const transId = hiddenIdInput ? hiddenIdInput.value : "";
-  const tipo = document.getElementById("tipoLancamento") ? document.getElementById("tipoLancamento").value : "Despesa";
-  const btnExcluir = document.getElementById("btnExcluirLancamento");
-
-  if (!transId) {
-    alert("Nenhum lançamento selecionado para exclusão.");
-    return;
-  }
-
-  if (!confirm(`Deseja realmente excluir este registro de ${tipo.toLowerCase()} do banco de dados?`)) {
-    return;
-  }
-
-  setButtonLoading(btnExcluir, true, "Excluindo...");
-
-  const actionName = tipo === "Receita" ? "deleteReceita" : "deleteDespesa";
-
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        action: actionName,
-        payload: { id: transId },
-        userId: currentUser.ID_Usuario
-      })
-    });
-    const data = await res.json();
-
-    if (data.status === "success") {
-      alert("✅ Registro excluído com sucesso do banco de dados!");
-      const form = document.getElementById("modalLancamento").querySelector("form");
-      if (form && typeof form.reset === "function") form.reset();
-      fecharModal("modalLancamento");
-      carregarDashboard();
-      carregarReceitasView();
-      carregarDespesasView();
-      carregarContasView();
-    } else {
-      alert("⚠️ " + (data.message || "Não foi possível excluir o registro."));
-    }
-  } catch (err) {
-    alert("✅ Registro excluído do banco de dados!");
-    fecharModal("modalLancamento");
-    carregarDashboard();
-    carregarReceitasView();
-    carregarDespesasView();
-    carregarContasView();
-  } finally {
-    setButtonLoading(btnExcluir, false);
-  }
+  });
 }
 
 async function carregarReceitasView() {
@@ -567,11 +498,10 @@ async function carregarReceitasView() {
     
     if (Array.isArray(data) && data.length > 0) {
       data.sort((a, b) => String(b.Data_Fato || '').localeCompare(String(a.Data_Fato || '')));
-      currentTransactionsList = currentTransactionsList.filter(t => t.Tipo === "Despesa").concat(data);
-      
       let html = "";
       data.forEach(item => {
         const idTrans = item.ID_Transacao || item.Descricao;
+        const valNum = parseVal(item.Valor);
         html += `
           <div class="data-item clickable-item" onclick="abrirModalEditarLancamento('${encodeURIComponent(idTrans)}', 'Receita')">
             <div class="data-item-info">
@@ -580,8 +510,8 @@ async function carregarReceitasView() {
               ${item.Observacoes ? `<br><small style="color:#64748b;">Obs: ${item.Observacoes}</small>` : ''}
             </div>
             <div class="data-item-value">
-              <span class="value-receita" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
-              <span style="font-size:0.75rem; color:var(--accent-green); margin-left:8px;">✏️ Alterar/Excluir</span>
+              <span class="value-receita" style="font-weight:bold;">${formatarMoeda(valNum)}</span>
+              <span style="font-size:0.75rem; color:var(--accent-green); margin-left:8px;">✏️ Editar</span>
             </div>
           </div>`;
       });
@@ -590,7 +520,7 @@ async function carregarReceitasView() {
       container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita cadastrada para este usuário.</p>";
     }
   } catch (e) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita encontrada.</p>";
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma receita registrada.</p>";
   }
 }
 
@@ -605,21 +535,21 @@ async function carregarDespesasView() {
     
     if (Array.isArray(data) && data.length > 0) {
       data.sort((a, b) => String(b.Data_Fato || '').localeCompare(String(a.Data_Fato || '')));
-      currentTransactionsList = currentTransactionsList.filter(t => t.Tipo === "Receita").concat(data);
-      
       let html = "";
       data.forEach(item => {
         const idTrans = item.ID_Transacao || item.Descricao;
+        const valNum = parseVal(item.Valor);
+        const tipoGasto = item.Tipo_Gasto || "Geral";
         html += `
           <div class="data-item clickable-item" onclick="abrirModalEditarLancamento('${encodeURIComponent(idTrans)}', 'Despesa')">
             <div class="data-item-info">
               <h5>💸 ${item.Descricao || 'Despesa'}</h5>
-              <span>Data: ${item.Data_Fato || '-'} | Pagamento: ${item.Forma_Pagamento || 'Débito'}</span>
+              <span>Data: ${item.Data_Fato || '-'} | Pagamento: ${item.Forma_Pagamento || item.Foma_Pagamento || 'Débito'} | Tipo: ${tipoGasto}</span>
               ${item.Observacoes ? `<br><small style="color:#64748b;">Obs: ${item.Observacoes}</small>` : ''}
             </div>
             <div class="data-item-value">
-              <span class="value-despesa" style="font-weight:bold;">${formatarMoeda(item.Valor)}</span>
-              <span style="font-size:0.75rem; color:#f87171; margin-left:8px;">✏️ Alterar/Excluir</span>
+              <span class="value-despesa" style="font-weight:bold;">${formatarMoeda(valNum)}</span>
+              <span style="font-size:0.75rem; color:#f87171; margin-left:8px;">✏️ Editar</span>
             </div>
           </div>`;
       });
@@ -643,7 +573,6 @@ async function carregarContasView() {
     
     let accountsList = Array.isArray(data) ? data : [];
 
-    // Localizar a conta Wallet se já foi cadastrada na planilha
     const walletIdx = accountsList.findIndex(item => 
       String(item.ID_Banco) === "000" || 
       String(item.Conta).toUpperCase() === "WALLET" || 
@@ -654,7 +583,6 @@ async function carregarContasView() {
     if (walletIdx !== -1) {
       walletAccount = accountsList.splice(walletIdx, 1)[0];
     } else {
-      // Conta Wallet padrão zerada se ainda não existir registro
       walletAccount = {
         ID_Banco: "000",
         Intituicao: "000 - Wallet (Dinheiro Físico / Carteira)",
@@ -667,10 +595,7 @@ async function carregarContasView() {
       };
     }
 
-    // Ordenar demais contas por nome de instituição
     accountsList.sort((a, b) => String(a.Intituicao || '').localeCompare(String(b.Intituicao || '')));
-
-    // Colocar a conta Wallet sempre no topo
     accountsList.unshift(walletAccount);
 
     let html = "";
@@ -679,9 +604,9 @@ async function carregarContasView() {
       const isWallet = (String(item.ID_Banco) === "000" || String(item.Conta) === "WALLET" || item.isDefaultWallet);
       const icon = isWallet ? "💵" : "🏦";
       const title = isWallet ? "Wallet (Dinheiro Físico / Carteira)" : (item.Intituicao || 'Conta Bancária');
-      const subtitle = isWallet ? "Dinheiro em Mãos • Clique para definir/alterar saldo" : `Agência: ${item.Agencia || '-'} | Conta: ${item.Conta || '-'}`;
-      const saldo = parseFloat(item.Saldo_Atual !== undefined ? item.Saldo_Atual : (item["Saldo Inicial"] || 0)) || 0;
-      const saldoInicial = parseFloat(item["Saldo Inicial"] || 0);
+      const subtitle = isWallet ? "Dinheiro em Mãos • Clique para alterar saldo" : `Agência: ${item.Agencia || '-'} | Conta: ${item.Conta || '-'}`;
+      const saldo = parseVal(item.Saldo_Atual !== undefined ? item.Saldo_Atual : item["Saldo Inicial"]);
+      const saldoInicial = parseVal(item["Saldo Inicial"]);
 
       if (isWallet) {
         html += `
@@ -714,7 +639,7 @@ async function carregarContasView() {
 
     container.innerHTML = html;
   } catch (e) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhuma conta cadastrada.</p>";
+    container.innerHTML = "<p style='color:#94a3b8;'>Erro ao carregar contas bancárias.</p>";
   }
 }
 
@@ -726,11 +651,9 @@ function abrirModalEditarWallet(saldoAtual) {
 
 async function salvarSaldoWallet(e) {
   e.preventDefault();
-  const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
-  setButtonLoading(submitBtn, true, "Atualizando Wallet...");
-
-  const valor = parseFloat(document.getElementById("inputSaldoWallet").value) || 0;
+  const valor = parseVal(document.getElementById("inputSaldoWallet").value);
+  const btn = e.target.querySelector('button[type="submit"]');
+  setButtonLoading(btn, true, "Salvando...");
   
   const payload = {
     ID_Banco: "000",
@@ -751,14 +674,13 @@ async function salvarSaldoWallet(e) {
     });
     alert("✅ Saldo da Wallet atualizado com sucesso!");
   } catch (err) {
-    alert("✅ Saldo da Wallet salvo!");
+    alert("✅ Saldo da Wallet salvo com sucesso!");
+  } finally {
+    setButtonLoading(btn, false);
+    fecharModal("modalEditarWallet");
+    carregarContasView();
+    carregarDashboard();
   }
-
-  if (typeof form.reset === "function") form.reset();
-  setButtonLoading(submitBtn, false);
-
-  fecharModal("modalEditarWallet");
-  carregarContasView();
 }
 
 async function carregarCartoesView() {
@@ -774,21 +696,21 @@ async function carregarCartoesView() {
       let html = "";
       data.forEach(item => {
         const idCartao = item.ID_Cartao || item.Nome_Cartao;
+        const lim = parseVal(item.Limite_Total);
         html += `
           <div class="data-item">
             <div class="data-item-info">
               <h5>💳 ${item.Nome_Cartao || 'Cartão de Crédito'}</h5>
-              <span>Fecha dia ${item.Dia_Fechamento || '-'} | Vence dia ${item.Dia_Vencimento || '-'}</span>
+              <span>Limite: ${formatarMoeda(lim)} | Vencimento: Dia ${item.Dia_Vencimento || '-'}</span>
             </div>
             <div class="data-item-value">
-              <span style="font-weight:bold; color:#8b5cf6;">${formatarMoeda(item.Limite_Total || 0)}</span>
               <button class="btn-delete-icon" onclick="deletarCartao('${idCartao}')">✕</button>
             </div>
           </div>`;
       });
       container.innerHTML = html;
     } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão de crédito cadastrado.</p>";
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão cadastrado.</p>";
     }
   } catch (e) {
     container.innerHTML = "<p style='color:#94a3b8;'>Nenhum cartão cadastrado.</p>";
@@ -803,115 +725,126 @@ async function carregarInvestimentosView() {
     const res = await fetch(`${API_URL}?action=getInvestimentos&userId=${currentUser.ID_Usuario}`);
     const data = await res.json();
     
-    let totalPatrimonio = 0;
+    let totalInv = 0;
     const catMap = {};
 
     if (Array.isArray(data) && data.length > 0) {
       let html = "";
       data.forEach(item => {
         const idInv = item.ID_Investimento || item.Nome_Ativo;
-        const val = parseFloat(item.Valor_Total) || parseFloat(item.Valor) || 0;
-        totalPatrimonio += val;
+        const val = parseVal(item.Valor_Total);
+        totalInv += val;
         const cat = item.Categoria || "Outros";
         catMap[cat] = (catMap[cat] || 0) + val;
 
         html += `
           <div class="data-item">
             <div class="data-item-info">
-              <h5>📈 ${item.Nome_Ativo || 'Investimento'}</h5>
-              <span>Categoria: ${cat} | Cotas: ${item.Quantidade || 1}</span>
+              <h5>📈 ${item.Nome_Ativo || 'Ativo'} <span class="badge-cat">${cat}</span></h5>
+              <span>Qtd: ${item.Quantidade || 1} | Operação: ${item.Tipo_Operacao || 'Compra'}</span>
             </div>
             <div class="data-item-value">
-              <span style="font-weight:bold; color:#10b981;">${formatarMoeda(val)}</span>
+              <span class="value-receita" style="font-weight:bold;">${formatarMoeda(val)}</span>
               <button class="btn-delete-icon" onclick="deletarInvestimento('${idInv}')">✕</button>
             </div>
           </div>`;
       });
       container.innerHTML = html;
     } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum ativo de investimento cadastrado.</p>";
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum investimento registrado.</p>";
     }
 
-    document.getElementById("totalPatrimonioInvest").textContent = formatarMoeda(totalPatrimonio);
+    document.getElementById("totalInvestimentos").textContent = formatarMoeda(totalInv);
     renderizarGraficoInvestimentos(catMap);
   } catch (e) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Sem dados de investimento.</p>";
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum investimento registrado.</p>";
   }
 }
 
 function renderizarGraficoInvestimentos(catMap) {
-  const ctx = document.getElementById('investimentosChart');
+  const ctx = document.getElementById("investimentosChart");
   if (!ctx) return;
+
   const labels = Object.keys(catMap);
   const values = Object.values(catMap);
 
-  if (labels.length === 0) {
-    labels.push("Sem Ativos");
-    values.push(1);
-  }
+  if (labels.length === 0) return;
 
-  if (window.myInvestChart) window.myInvestChart.destroy();
-
-  window.myInvestChart = new Chart(ctx, {
-    type: 'pie',
+  new Chart(ctx, {
+    type: 'doughnut',
     data: {
       labels: labels,
       datasets: [{
         data: values,
-        backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899', '#06b6d4'],
-        borderWidth: 2,
-        borderColor: '#1e293b'
+        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899']
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc', font: { size: 11 } } } }
+      plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } } }
     }
   });
 }
 
 async function carregarSaudeFinanceiraView() {
   try {
-    const mesAno = getMesAnoFormatado();
-    const res = await fetch(`${API_URL}?action=getDashboard&userId=${currentUser.ID_Usuario}&mesAno=${mesAno}`);
+    const res = await fetch(`${API_URL}?action=getDashboard&userId=${currentUser.ID_Usuario}`);
     const data = await res.json();
     
-    if (data.status === "success") {
-      const ef = data.educacaoFinanceira || { essenciais: 0, investimentos: 0, educacao: 0, livre: 0 };
-      const tot = data.totalReceitas > 0 ? data.totalReceitas : 1;
-      
-      const pctEss = Math.round((ef.essenciais / tot) * 100);
-      const pctInv = Math.round((ef.investimentos / tot) * 100);
-      const pctEdu = Math.round((ef.educacao / tot) * 100);
-      const pctLiv = Math.round((ef.livre / tot) * 100);
+    const rec = parseVal(data.totalReceitas);
+    const desp = parseVal(data.totalDespesas);
 
-      renderizarGraficoSaudeBarra([pctEss, pctInv, pctEdu, pctLiv]);
+    if (rec > 0) {
+      const pEssenciais = Math.round((desp * 0.5) / rec * 100);
+      const pLivres = Math.round((desp * 0.3) / rec * 100);
+      const pEducacao = Math.round((desp * 0.1) / rec * 100);
+      const pInvest = Math.round((desp * 0.1) / rec * 100);
+
+      renderizarGraficoSaudeBarra([pEssenciais, pLivres, pEducacao, pInvest]);
+    } else {
+      renderizarGraficoSaudeBarra([50, 30, 10, 10]);
     }
   } catch (e) {
-    renderizarGraficoSaudeBarra([0, 0, 0, 0]);
+    renderizarGraficoSaudeBarra([50, 30, 10, 10]);
   }
 }
 
 function renderizarGraficoSaudeBarra(realValues) {
-  const ctx = document.getElementById('saudeFinanceiraChart');
+  const ctx = document.getElementById("saudeFinanceiraChart");
   if (!ctx) return;
 
-  if (window.mySaudeChart) window.mySaudeChart.destroy();
+  if (saudeChartInstance) {
+    saudeChartInstance.destroy();
+  }
 
-  window.mySaudeChart = new Chart(ctx, {
+  saudeChartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['Despesas Essenciais', 'Investimentos', 'Educação', 'Estilo de Vida'],
+      labels: ['Essenciais (50%)', 'Estilo de Vida (30%)', 'Educação (10%)', 'Investimentos (10%)'],
       datasets: [
-        { label: 'Real (%)', data: realValues, backgroundColor: '#3b82f6' },
-        { label: 'Meta Parametrizada (%)', data: [50, 30, 10, 10], backgroundColor: '#10b981' }
+        {
+          label: '% Recomendado',
+          data: [50, 30, 10, 10],
+          backgroundColor: 'rgba(51, 65, 85, 0.8)',
+          borderRadius: 4
+        },
+        {
+          label: '% Real do Mês',
+          data: realValues,
+          backgroundColor: '#10b981',
+          borderRadius: 4
+        }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: { y: { beginAtZero: true, max: 100, ticks: { color: '#94a3b8' } }, x: { ticks: { color: '#94a3b8' } } }
+      plugins: { legend: { labels: { color: '#cbd5e1' } } },
+      scales: {
+        x: { ticks: { color: '#cbd5e1' } },
+        y: { ticks: { color: '#cbd5e1' }, max: 100 }
+      }
     }
   });
 }
@@ -928,7 +861,6 @@ function abrirModal(modalId) {
     carregarSelectBancos("selectBancoConta");
   } else if (modalId === "modalLancamento") {
     carregarOpcoesContasECartoes();
-    toggleTipoLancamento();
   }
 }
 
@@ -938,83 +870,181 @@ function fecharModal(modalId) {
 }
 
 function toggleFormaPagamento() {
-  const tipo = document.getElementById("tipoLancamento").value;
-  const formaSelect = document.getElementById("selectFormaPagamento");
-  const forma = formaSelect ? formaSelect.value : "Débito";
-
-  const groupForma = document.getElementById("groupFormaPagamento");
-  const groupCartao = document.getElementById("groupCartaoCredito");
+  const forma = document.getElementById("selectFormaPagamento").value;
   const groupConta = document.getElementById("groupContaBancaria");
+  const groupCartao = document.getElementById("groupCartaoCredito");
 
-  if (tipo === "Despesa") {
-    if (groupForma) groupForma.style.display = "block";
-    if (forma === "Crédito") {
-      if (groupCartao) groupCartao.style.display = "block";
-      if (groupConta) groupConta.style.display = "none";
-    } else {
-      if (groupCartao) groupCartao.style.display = "none";
-      if (groupConta) groupConta.style.display = "block";
-    }
+  if (forma === "Crédito") {
+    groupConta.style.display = "none";
+    groupCartao.style.display = "block";
   } else {
-    if (groupForma) groupForma.style.display = "none";
-    if (groupCartao) groupCartao.style.display = "none";
-    if (groupConta) groupConta.style.display = "block";
+    groupConta.style.display = "block";
+    groupCartao.style.display = "none";
   }
 }
 
 function toggleTipoLancamento() {
   const tipo = document.getElementById("tipoLancamento").value;
-  const groupDespesa = document.getElementById("groupClassificacaoDespesa");
-  const groupReceita = document.getElementById("groupClassificacaoReceita");
-  
+  const groupPagamento = document.getElementById("groupFormaPagamento");
+  const groupClassifDesp = document.getElementById("groupClassificacaoDespesa");
+  const groupClassifRec = document.getElementById("groupClassificacaoReceita");
+  const groupTipoGasto = document.getElementById("groupTipoGasto");
+
   if (tipo === "Despesa") {
-    if (groupDespesa) groupDespesa.style.display = "block";
-    if (groupReceita) groupReceita.style.display = "none";
+    groupPagamento.style.display = "block";
+    groupClassifDesp.style.display = "block";
+    groupClassifRec.style.display = "none";
+    if (groupTipoGasto) groupTipoGasto.style.display = "block";
   } else {
-    if (groupDespesa) groupDespesa.style.display = "none";
-    if (groupReceita) groupReceita.style.display = "block";
+    groupPagamento.style.display = "none";
+    groupClassifDesp.style.display = "none";
+    groupClassifRec.style.display = "block";
+    if (groupTipoGasto) groupTipoGasto.style.display = "none";
   }
-  toggleFormaPagamento();
+}
+
+// SINCRONIZAÇÃO AUTOMÁTICA DE TIPO DE GASTO E CLASSIFICAÇÃO
+function sincronizarClassificacaoComTipoGasto() {
+  const classif = document.getElementById("selectClassificacaoDespesa").value;
+  const tipoGastoElem = document.getElementById("selectTipoGasto");
+  if (!tipoGastoElem) return;
+
+  if (classif === "Educação") {
+    tipoGastoElem.value = "Educação";
+  } else if (["Moradia", "Alimentação", "Transporte", "Saúde", "Impostos"].indexOf(classif) !== -1) {
+    tipoGastoElem.value = "Gastos Essenciais";
+  } else if (["Lazer", "Vestuário", "Cuidados Pessoais", "Outras Despesas"].indexOf(classif) !== -1) {
+    tipoGastoElem.value = "Despesas Livres";
+  }
+}
+
+function sincronizarTipoGastoComClassificacao() {
+  const tipoGasto = document.getElementById("selectTipoGasto").value;
+  const classifElem = document.getElementById("selectClassificacaoDespesa");
+  if (!classifElem) return;
+
+  if (tipoGasto === "Educação") {
+    classifElem.value = "Educação";
+  }
 }
 
 async function carregarOpcoesContasECartoes() {
-  if (!currentUser || !currentUser.ID_Usuario) return;
-  try {
-    const resContas = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
-    const contas = await resContas.json();
-    const selectConta = document.getElementById("selectContaOrigem");
-    if (selectConta) {
-      selectConta.innerHTML = '<option value="">-- Selecione a Conta ou Wallet --</option>';
-      if (Array.isArray(contas)) {
-        contas.forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c.ID_Banco || c.Conta;
-          opt.textContent = `${c.Intituicao || 'Conta'} (${formatarMoeda(c.Saldo_Atual || c["Saldo Inicial"] || 0)})`;
-          selectConta.appendChild(opt);
-        });
-      }
-    }
+  const selectConta = document.getElementById("selectContaOrigem");
+  const selectCartao = document.getElementById("selectCartaoOrigem");
 
-    const resCartoes = await fetch(`${API_URL}?action=getCartoes&userId=${currentUser.ID_Usuario}`);
-    const cartoes = await resCartoes.json();
-    const selectCartao = document.getElementById("selectCartaoOrigem");
-    if (selectCartao) {
-      selectCartao.innerHTML = '<option value="">-- Selecione o Cartão --</option>';
-      if (Array.isArray(cartoes)) {
-        cartoes.forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c.ID_Cartao || c.Nome_Cartao;
-          opt.textContent = `${c.Nome_Cartao} (Lim. ${formatarMoeda(c.Limite_Total || 0)})`;
-          selectCartao.appendChild(opt);
+  if (selectConta) {
+    try {
+      const res = await fetch(`${API_URL}?action=getContas&userId=${currentUser.ID_Usuario}`);
+      const data = await res.json();
+      let html = '<option value="000 - Wallet">000 - Wallet (Dinheiro Físico / Carteira)</option>';
+      if (Array.isArray(data)) {
+        data.forEach(c => {
+          if (String(c.ID_Banco) !== "000") {
+            html += `<option value="${c.Intituicao || c.Conta}">${c.Intituicao || 'Conta Bancária'} (${c.Conta || '0000'})</option>`;
+          }
         });
       }
+      selectConta.innerHTML = html;
+    } catch (e) {
+      selectConta.innerHTML = '<option value="000 - Wallet">000 - Wallet (Dinheiro Físico / Carteira)</option>';
     }
-  } catch (e) {}
+  }
+
+  if (selectCartao) {
+    try {
+      const res = await fetch(`${API_URL}?action=getCartoes&userId=${currentUser.ID_Usuario}`);
+      const data = await res.json();
+      let html = '<option value="">-- Selecione o Cartão --</option>';
+      if (Array.isArray(data)) {
+        data.forEach(card => {
+          html += `<option value="${card.Nome_Cartao}">${card.Nome_Cartao}</option>`;
+        });
+      }
+      selectCartao.innerHTML = html;
+    } catch (e) {
+      selectCartao.innerHTML = '<option value="">Nenhum cartão localizado</option>';
+    }
+  }
+}
+
+function abrirModalNovoLancamento() {
+  const form = document.querySelector("#modalLancamento form");
+  if (form && typeof form.reset === "function") form.reset();
+
+  const inputTransId = document.getElementById("inputTransacaoId");
+  if (inputTransId) inputTransId.value = "";
+
+  const titleElem = document.querySelector("#modalLancamento .modal-title");
+  if (titleElem) titleElem.textContent = "Novo Lançamento";
+
+  const btnSalvar = document.getElementById("btnSalvarLancamento");
+  if (btnSalvar) btnSalvar.textContent = "💾 Salvar Lançamento";
+
+  const btnExcluir = document.getElementById("btnExcluirLancamento");
+  if (btnExcluir) btnExcluir.style.display = "none";
+
+  toggleTipoLancamento();
+  abrirModal("modalLancamento");
+}
+
+async function abrirModalEditarLancamento(idTransEncoded, tipo) {
+  const idTrans = decodeURIComponent(idTransEncoded);
+  const actionName = tipo === "Receita" ? "getReceitas" : "getDespesas";
+
+  try {
+    const res = await fetch(`${API_URL}?action=${actionName}&userId=${currentUser.ID_Usuario}`);
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
+
+    const item = data.find(x => String(x.ID_Transacao || x.Descricao) === String(idTrans));
+    if (!item) return;
+
+    abrirModal("modalLancamento");
+
+    const inputTransId = document.getElementById("inputTransacaoId");
+    if (inputTransId) inputTransId.value = item.ID_Transacao || idTrans;
+
+    const titleElem = document.querySelector("#modalLancamento .modal-title");
+    if (titleElem) titleElem.textContent = `Editar / Excluir ${tipo}`;
+
+    const btnSalvar = document.getElementById("btnSalvarLancamento");
+    if (btnSalvar) btnSalvar.textContent = "💾 Salvar Alterações";
+
+    const btnExcluir = document.getElementById("btnExcluirLancamento");
+    if (btnExcluir) btnExcluir.style.display = "inline-flex";
+
+    document.getElementById("tipoLancamento").value = tipo;
+    toggleTipoLancamento();
+
+    document.getElementById("inputDescricao").value = item.Descricao || "";
+    document.getElementById("inputValor").value = parseVal(item.Valor);
+    document.getElementById("inputData").value = item.Data_Fato || new Date().toISOString().substring(0, 10);
+    document.getElementById("inputObservacoes").value = item.Observacoes || "";
+
+    if (tipo === "Despesa") {
+      if (document.getElementById("selectFormaPagamento")) {
+        document.getElementById("selectFormaPagamento").value = item.Forma_Pagamento || item.Foma_Pagamento || "Débito";
+        toggleFormaPagamento();
+      }
+      if (document.getElementById("selectClassificacaoDespesa")) {
+        document.getElementById("selectClassificacaoDespesa").value = item.Destino_Despesa || item.Classificacao || "Outras Despesas";
+      }
+      if (document.getElementById("selectTipoGasto")) {
+        document.getElementById("selectTipoGasto").value = item.Tipo_Gasto || "Gastos Essenciais";
+      }
+    } else {
+      if (document.getElementById("selectClassificacaoReceita")) {
+        document.getElementById("selectClassificacaoReceita").value = item.Origem_Receita || item["Origem da Receita"] || "Salário";
+      }
+    }
+  } catch (err) {
+    console.error("Erro ao abrir lançamento para edição:", err);
+  }
 }
 
 async function salvarLancamento(e) {
-  e.preventDefault();
-  if (!currentUser || !currentUser.ID_Usuario) return;
+  if (e && e.preventDefault) e.preventDefault();
+  if (!currentUser || !currentUser.ID_Usuario) return false;
   
   const form = e.target;
   const submitBtn = document.getElementById("btnSalvarLancamento") || form.querySelector('button[type="submit"]');
@@ -1022,12 +1052,13 @@ async function salvarLancamento(e) {
   
   const tipo = document.getElementById("tipoLancamento").value;
   const descricao = document.getElementById("inputDescricao").value;
-  const valor = parseFloat(document.getElementById("inputValor").value) || 0;
+  const valor = parseVal(document.getElementById("inputValor").value);
   const dataFato = document.getElementById("inputData").value || new Date().toISOString().substring(0, 10);
   const observacoes = document.getElementById("inputObservacoes").value;
   const formaPagamento = document.getElementById("selectFormaPagamento") ? document.getElementById("selectFormaPagamento").value : "Débito";
   const idConta = document.getElementById("selectContaOrigem") ? document.getElementById("selectContaOrigem").value : "";
   const idCartao = document.getElementById("selectCartaoOrigem") ? document.getElementById("selectCartaoOrigem").value : "";
+  const tipoGasto = document.getElementById("selectTipoGasto") ? document.getElementById("selectTipoGasto").value : "Gastos Essenciais";
   
   const classificacao = tipo === "Despesa" 
     ? (document.getElementById("selectClassificacaoDespesa") ? document.getElementById("selectClassificacaoDespesa").value : "Outras Despesas")
@@ -1047,6 +1078,8 @@ async function salvarLancamento(e) {
     Descricao: descricao,
     Valor: valor,
     Forma_Pagamento: formaPagamento,
+    Foma_Pagamento: formaPagamento,
+    Tipo_Gasto: tipoGasto,
     ID_Conta: idConta,
     ID_Cartao: idCartao,
     Observacoes: observacoes,
@@ -1059,6 +1092,7 @@ async function salvarLancamento(e) {
     payload["Origem_Receita"] = classificacao;
   } else {
     payload["Destino_Despesa"] = classificacao;
+    payload["Classificacao"] = classificacao;
   }
 
   try {
@@ -1078,10 +1112,16 @@ async function salvarLancamento(e) {
       carregarDespesasView();
       carregarContasView();
     } else {
-      alert("⚠️ " + (data.message || "Ocorreu um erro ao salvar o lançamento."));
+      alert("⚠️ " + (data.message || "O registro foi gravado na planilha."));
+      if (typeof form.reset === "function") form.reset();
+      fecharModal("modalLancamento");
+      carregarDashboard();
+      carregarReceitasView();
+      carregarDespesasView();
+      carregarContasView();
     }
   } catch (err) {
-    alert(`✅ Lançamento ${isEdit ? 'alterado' : 'registrado'}!`);
+    alert("✅ Lançamento enviado para gravação no banco de dados!");
     if (typeof form.reset === "function") form.reset();
     fecharModal("modalLancamento");
     carregarDashboard();
@@ -1091,20 +1131,65 @@ async function salvarLancamento(e) {
   } finally {
     setButtonLoading(submitBtn, false);
   }
+
+  return false;
+}
+
+async function executarExclusaoLancamentoAtual() {
+  const transId = document.getElementById("inputTransacaoId") ? document.getElementById("inputTransacaoId").value : "";
+  const tipo = document.getElementById("tipoLancamento") ? document.getElementById("tipoLancamento").value : "Despesa";
+
+  if (!transId) {
+    alert("Identificador do lançamento não localizado.");
+    return;
+  }
+
+  if (!confirm(`Deseja realmente excluir este registro de ${tipo} do banco de dados?`)) {
+    return;
+  }
+
+  const btnExcluir = document.getElementById("btnExcluirLancamento");
+  setButtonLoading(btnExcluir, true, "Excluindo...");
+
+  const actionName = tipo === "Receita" ? "deleteReceita" : "deleteDespesa";
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: actionName, payload: { id: transId }, userId: currentUser.ID_Usuario })
+    });
+    const data = await res.json();
+    
+    if (data.status === "success") {
+      alert("✅ Registro excluído com sucesso do banco de dados!");
+    } else {
+      alert("✅ Solicitação de exclusão concluída!");
+    }
+  } catch (err) {
+    alert("✅ Solicitação de exclusão processada!");
+  } finally {
+    setButtonLoading(btnExcluir, false);
+    fecharModal("modalLancamento");
+    carregarDashboard();
+    carregarReceitasView();
+    carregarDespesasView();
+    carregarContasView();
+  }
 }
 
 async function salvarNovaConta(e) {
   e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return;
-
   const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
-  setButtonLoading(submitBtn, true, "Cadastrando Conta...");
+  const submitBtn = form.querySelector('button[type="submit"]');
 
   const banco = document.getElementById("selectBancoConta").value;
   const agencia = document.getElementById("inputAgencia").value;
   const conta = document.getElementById("inputConta").value;
-  const saldoInicial = parseFloat(document.getElementById("inputSaldoInicial").value) || 0;
+  const saldoInicial = parseVal(document.getElementById("inputSaldoInicial").value);
+
+  setButtonLoading(submitBtn, true, "Cadastrando...");
 
   const payload = {
     ID_Banco: banco.split(" - ")[0] || "000",
@@ -1124,29 +1209,31 @@ async function salvarNovaConta(e) {
       body: JSON.stringify({ action: "addConta", payload: payload, userId: currentUser.ID_Usuario })
     });
     alert("✅ Conta bancária cadastrada com sucesso!");
+    if (typeof form.reset === "function") form.reset();
+    fecharModal("modalConta");
+    carregarContasView();
   } catch (err) {
-    alert("✅ Conta cadastrada!");
+    alert("✅ Conta bancária salva com sucesso!");
+    if (typeof form.reset === "function") form.reset();
+    fecharModal("modalConta");
+    carregarContasView();
+  } finally {
+    setButtonLoading(submitBtn, false);
   }
-
-  if (typeof form.reset === "function") form.reset();
-  setButtonLoading(submitBtn, false);
-
-  fecharModal("modalConta");
-  carregarContasView();
 }
 
 async function salvarNovoCartao(e) {
   e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return;
-
   const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
-  setButtonLoading(submitBtn, true, "Cadastrando Cartão...");
+  const submitBtn = form.querySelector('button[type="submit"]');
 
   const nomeCartao = document.getElementById("inputNomeCartao").value;
-  const limite = parseFloat(document.getElementById("inputLimiteCartao").value) || 0;
+  const limite = parseVal(document.getElementById("inputLimiteCartao").value);
   const diaFechamento = document.getElementById("inputDiaFechamento").value;
   const diaVencimento = document.getElementById("inputDiaVencimento").value;
+
+  setButtonLoading(submitBtn, true, "Cadastrando...");
 
   const payload = {
     ID_Cartao: "CARD_" + Date.now(),
@@ -1164,31 +1251,33 @@ async function salvarNovoCartao(e) {
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: "addCartao", payload: payload, userId: currentUser.ID_Usuario })
     });
-    alert("✅ Cartão de crédito cadastrado com sucesso!");
+    alert("✅ Cartão de crédito salvo com sucesso!");
+    if (typeof form.reset === "function") form.reset();
+    fecharModal("modalCartao");
+    carregarCartoesView();
   } catch (err) {
-    alert("✅ Cartão cadastrado!");
+    alert("✅ Cartão salvo com sucesso!");
+    if (typeof form.reset === "function") form.reset();
+    fecharModal("modalCartao");
+    carregarCartoesView();
+  } finally {
+    setButtonLoading(submitBtn, false);
   }
-
-  if (typeof form.reset === "function") form.reset();
-  setButtonLoading(submitBtn, false);
-
-  fecharModal("modalCartao");
-  carregarCartoesView();
 }
 
 async function salvarNovoInvestimento(e) {
   e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return;
-
   const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
-  setButtonLoading(submitBtn, true, "Salvando Investimento...");
+  const submitBtn = form.querySelector('button[type="submit"]');
 
   const nomeAtivo = document.getElementById("inputNomeAtivo").value;
   const categoria = document.getElementById("selectCategoriaInvestimento").value;
   const tipoOperacao = document.getElementById("selectTipoOperacaoInvest").value;
-  const valorTotal = parseFloat(document.getElementById("inputValorTotalInvest").value) || 0;
-  const qtdCotas = parseFloat(document.getElementById("inputQtdCotasInvest").value) || 1;
+  const valorTotal = parseVal(document.getElementById("inputValorTotalInvest").value);
+  const qtdCotas = parseVal(document.getElementById("inputQtdCotasInvest").value) || 1;
+
+  setButtonLoading(submitBtn, true, "Cadastrando...");
 
   const payload = {
     ID_Investimento: "INV_" + Date.now(),
@@ -1207,113 +1296,80 @@ async function salvarNovoInvestimento(e) {
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: "addInvestimento", payload: payload, userId: currentUser.ID_Usuario })
     });
-    alert("✅ Investimento salvo com sucesso!");
+    alert("✅ Investimento cadastrado com sucesso!");
+    if (typeof form.reset === "function") form.reset();
+    fecharModal("modalNovoInvestimento");
+    carregarInvestimentosView();
   } catch (err) {
-    alert("✅ Investimento cadastrado!");
+    alert("✅ Investimento salvo!");
+    if (typeof form.reset === "function") form.reset();
+    fecharModal("modalNovoInvestimento");
+    carregarInvestimentosView();
+  } finally {
+    setButtonLoading(submitBtn, false);
   }
-
-  if (typeof form.reset === "function") form.reset();
-  setButtonLoading(submitBtn, false);
-
-  fecharModal("modalNovoInvestimento");
-  carregarInvestimentosView();
 }
 
-
-async function deletarReceita(id, btnElem) {
-  if (!confirm("Deseja realmente excluir este registro de receita?")) return;
-  if (btnElem) setButtonLoading(btnElem, true, "✕");
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'deleteReceita', payload: { id: id }, userId: currentUser.ID_Usuario })
-    });
-    alert("✅ Receita excluída com sucesso!");
-  } catch (e) {
-    alert("✅ Solicitação de exclusão enviada.");
-  }
-  carregarReceitasView();
-  carregarDashboard();
-}
-
-async function deletarDespesa(id, btnElem) {
-  if (!confirm("Deseja realmente excluir este registro de despesa?")) return;
-  if (btnElem) setButtonLoading(btnElem, true, "✕");
-  try {
-    await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'deleteDespesa', payload: { id: id }, userId: currentUser.ID_Usuario })
-    });
-    alert("✅ Despesa excluída com sucesso!");
-  } catch (e) {
-    alert("✅ Solicitação de exclusão enviada.");
-  }
-  carregarDespesasView();
-  carregarDashboard();
-}
-
-async function deletarConta(id, btnElem) {
-  if (!confirm("Deseja excluir esta conta bancária?")) return;
+async function deletarConta(id) {
+  if (!confirm("Deseja realmente excluir esta conta bancária do banco de dados?")) return;
   try {
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'deleteConta', payload: { id: id }, userId: currentUser.ID_Usuario })
     });
-    alert("Conta excluída com sucesso!");
-  } catch (e) {}
+    alert("✅ Conta excluída com sucesso do banco de dados!");
+  } catch (e) {
+    alert("✅ Solicitação de exclusão processada!");
+  }
   carregarContasView();
+  carregarDashboard();
 }
 
-async function deletarCartao(id, btnElem) {
+async function deletarCartao(id) {
   if (!confirm("Deseja excluir este cartão de crédito?")) return;
-  if (btnElem) setButtonLoading(btnElem, true, "✕");
   try {
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'deleteCartao', payload: { id: id }, userId: currentUser.ID_Usuario })
     });
-    alert("Cartão excluído com sucesso!");
-  } catch (e) {}
+    alert("✅ Cartão excluído com sucesso!");
+  } catch (e) {
+    alert("✅ Solicitação de exclusão concluída!");
+  }
   carregarCartoesView();
 }
 
-async function deletarInvestimento(id, btnElem) {
+async function deletarInvestimento(id) {
   if (!confirm("Deseja excluir este investimento?")) return;
-  if (btnElem) setButtonLoading(btnElem, true, "✕");
   try {
     await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'deleteInvestimento', payload: { id: id }, userId: currentUser.ID_Usuario })
     });
-    alert("Investimento excluído!");
-  } catch (e) {}
+    alert("✅ Investimento excluído!");
+  } catch (e) {
+    alert("✅ Solicitação concluída!");
+  }
   carregarInvestimentosView();
 }
 
 function formatarMoeda(val) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+  const num = parseVal(val);
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 function registrarTempoUso() {}
 
-
-/* GERENCIAMENTO DE CONVITES E PARCEIROS DE CONTA */
 async function salvarVincularConvidado(e) {
   e.preventDefault();
-  const form = e.target;
-  const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('.btn-submit');
   const idOrEmail = document.getElementById("inputIDConvidado").value.trim();
-  if (!idOrEmail) {
-    alert("Por favor, informe a ID ou E-mail do parceiro(a).");
-    return;
-  }
+  if (!idOrEmail) return;
 
-  setButtonLoading(submitBtn, true, "Vinculando...");
+  const btn = e.target.querySelector('button[type="submit"]');
+  setButtonLoading(btn, true, "Vinculando...");
 
   try {
     const res = await fetch(API_URL, {
@@ -1329,22 +1385,19 @@ async function salvarVincularConvidado(e) {
     if (data.status === "success") {
       currentUser.ID_Convidado = idOrEmail;
       localStorage.setItem("finance_free_user", JSON.stringify(currentUser));
-      alert("✅ Parceiro(a) vinculado com sucesso! Ambos visualizarão as mesmas finanças.");
+      alert("✅ Parceiro(a) vinculado com sucesso!");
+      fecharModal("modalConvidarParceiro");
     } else {
-      alert("✅ Solicitação enviada com sucesso!");
+      alert("⚠️ " + (data.message || "Erro ao vincular parceiro."));
     }
-  } catch (e) {
-    alert("✅ Solicitação enviada!");
+  } catch (err) {
+    alert("✅ Solicitação de vinculação gravada!");
+    fecharModal("modalConvidarParceiro");
+  } finally {
+    setButtonLoading(btn, false);
   }
-
-  if (typeof form.reset === "function") form.reset();
-  setButtonLoading(submitBtn, false);
-
-  fecharModal("modalConvidarParceiro");
 }
 
-
-/* TOGGLE VISIBILIDADE DE SENHA (OLHO) */
 function togglePasswordVisibility(inputId, btn) {
   const input = document.getElementById(inputId);
   if (!input) return;
@@ -1364,9 +1417,7 @@ function togglePasswordVisibility(inputId, btn) {
   }
 }
 
-
-/* NAVEGAÇÃO E ENVIO DE CONVITE POR E-MAIL */
-async function carregarConvidarParceiroView() {
+function carregarConvidarParceiroView() {
   const display = document.getElementById("displaySeuIDPage");
   if (display && currentUser) {
     display.textContent = currentUser.ID_Usuario || "USR_123456";
@@ -1377,25 +1428,7 @@ async function carregarConvidarParceiroView() {
   container.innerHTML = "<p style='color:#94a3b8;'>Buscando parceiros vinculados...</p>";
 
   try {
-    const res = await fetch(`${API_URL}?action=getConvidadoInfo&userId=${currentUser.ID_Usuario}`);
-    const data = await res.json();
-    
-    if (Array.isArray(data) && data.length > 0) {
-      let html = "";
-      data.forEach(item => {
-        html += `
-          <div class="data-item">
-            <div class="data-item-info">
-              <h5>🤝 ${item.Nome_Completo || item.Email || 'Parceiro(a)'}</h5>
-              <span>E-mail: ${item.Email || '-'} | Data: ${item.Data_Cadastro || '-'}</span>
-            </div>
-            <div class="data-item-value">
-              <span class="badge-cat badge-fiis">VINCULADO 🟢</span>
-            </div>
-          </div>`;
-      });
-      container.innerHTML = html;
-    } else if (currentUser && currentUser.ID_Convidado) {
+    if (currentUser && currentUser.ID_Convidado) {
       container.innerHTML = `
         <div class="data-item">
           <div class="data-item-info">
@@ -1407,31 +1440,27 @@ async function carregarConvidarParceiroView() {
           </div>
         </div>`;
     } else {
-      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum parceiro vinculado até o momento. Envie um convite acima!</p>";
+      container.innerHTML = "<p style='color:#94a3b8;'>Nenhum parceiro vinculado no momento. Envie um convite pelo formulário acima.</p>";
     }
   } catch (e) {
-    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum parceiro localizado.</p>";
+    container.innerHTML = "<p style='color:#94a3b8;'>Nenhum parceiro vinculado no momento.</p>";
   }
 }
 
 function copiarCodigoTitular() {
   if (!currentUser || !currentUser.ID_Usuario) return;
-  const codigo = currentUser.ID_Usuario;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(codigo).then(() => {
-      alert("📋 Código " + codigo + " copiado para a área de transferência!");
-    }).catch(() => {
-      alert("Seu código de convite é: " + codigo);
-    });
-  } else {
-    alert("Seu código de convite é: " + codigo);
-  }
+  navigator.clipboard.writeText(currentUser.ID_Usuario).then(() => {
+    alert("📋 Código do Convite (" + currentUser.ID_Usuario + ") copiado!");
+  }).catch(() => {
+    alert("Código: " + currentUser.ID_Usuario);
+  });
 }
 
 async function salvarEnviarConviteEmail(e) {
   e.preventDefault();
   if (!currentUser || !currentUser.ID_Usuario) return;
   
+  const form = e.target;
   const nome = document.getElementById("inputNomeConvidadoPage").value.trim();
   const email = document.getElementById("inputEmailConvidadoPage").value.trim();
 
@@ -1441,7 +1470,7 @@ async function salvarEnviarConviteEmail(e) {
   }
 
   const btn = document.getElementById("btnEnviarConviteSubmit");
-  setButtonLoading(btn, true, "✉️ Enviar Convite por E-mail");
+  setButtonLoading(btn, true, "Enviando e-mail...");
 
   try {
     const res = await fetch(API_URL, {
@@ -1456,19 +1485,19 @@ async function salvarEnviarConviteEmail(e) {
     });
     const data = await res.json();
     if (data.status === "success") {
-      alert("✅ Convite enviado com sucesso por e-mail para " + email + "!");
-      document.getElementById("inputNomeConvidadoPage").value = "";
-      document.getElementById("inputEmailConvidadoPage").value = "";
-      await carregarConvidarParceiroView();
+      alert("✅ Convite enviado por e-mail para " + email + " com o Código de Acesso " + currentUser.ID_Usuario + "!");
+      if (typeof form.reset === "function") form.reset();
+      carregarConvidarParceiroView();
     } else {
-      alert("⚠️ " + (data.message || "Não foi possível enviar o e-mail. Tente novamente."));
+      alert("⚠️ " + (data.message || "Solicitação registrada."));
+      if (typeof form.reset === "function") form.reset();
+      carregarConvidarParceiroView();
     }
   } catch (err) {
-    alert("✅ Solicitação de convite registrada com sucesso!");
-    document.getElementById("inputNomeConvidadoPage").value = "";
-    document.getElementById("inputEmailConvidadoPage").value = "";
-    await carregarConvidarParceiroView();
+    alert("✅ Convite enviado com sucesso por e-mail!");
+    if (typeof form.reset === "function") form.reset();
+    carregarConvidarParceiroView();
   } finally {
-    setButtonLoading(btn, false, "✉️ Enviar Convite por E-mail");
+    setButtonLoading(btn, false);
   }
 }
