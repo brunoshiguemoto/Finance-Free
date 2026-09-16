@@ -12,7 +12,7 @@ function extractDateFromId(idStr) {
 }
 
 // ============================================================================
-// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 35.0
+// FINANCE FREE - LÓGICA FRONTEND (JavaScript) - VERSÃO 36.0
 // Arquivo: app.js
 // Descrição: Suporte total a tratamento de moedas ("R$ 100,00"), gráfico de barras
 //            horizontais (Resumo Orçamentário), menu Tipo_Gasto com vínculo automático
