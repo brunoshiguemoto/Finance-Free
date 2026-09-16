@@ -14,7 +14,7 @@ let despesasChartInstance = null;
 let resumoBarrasChartInstance = null;
 let saudeChartInstance = null;
 
-console.log("🚀 Finance Free Frontend v29.0 Inicializado!");
+console.log("🚀 Finance Free Frontend v33.0 Inicializado!");
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarApp();
