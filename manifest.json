@@ -1,0 +1,26 @@
+{
+  "name": "Finance Free",
+  "short_name": "Finance Free",
+  "description": "Gestão financeira familiar, gratuita e livre.",
+  "start_url": "/Finance-Free/",
+  "scope": "/Finance-Free/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/Finance-Free/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Finance-Free/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
